@@ -1,0 +1,52 @@
+run:
+  skip-dirs:
+    - doc
+    - docs
+    - .cache
+
+linters-settings:
+  maligned:
+    suggest-new: true
+  gocritic:
+    disabled-checks:
+      - singleCaseSwitch
+      - ifElseChain  # Don't advice "if-else to switch"
+  cyclop:
+    max-complexity: 30  # Set max cyclomatic complexity to 30
+  revive:
+    rules:
+      - name: var-naming  # Don't check var naming or package naming
+        Disabled: true
+  stylecheck:
+    checks: ["all", "-ST1003"]
+  gomoddirectives:
+    replace-allow-list:  # Allow current replace in go.mod
+
+linters:
+  disable:
+    - gochecknoglobals
+    - funlen
+    - lll  # Don't complain of line too long
+    - goerr113  # Don't check if error is dynamic. I disabled it here because it seems in many cases we just log err msg and we don't check error type.
+    - gochecknoinits  # Don't complain of init() function
+    - forbidigo  # Don't forbid using fmt.Printf/fmt.Println
+    - promlinter  # Don't check Prometheus metrics naming
+    - exhaustive  # Don't check exhaustiveness of enum switch statements
+    - exhaustivestruct  # Don't check if all fields of a struct is initialized
+    - wsl  # This linter force you to add/remove empty lines to improve readibility
+    - nlreturn  # This linter force you to add new line before return/goto/break
+    - durationcheck # Don't complain of >2 durations multiply (e.g. time.Hour*24*rotationTime)
+    - gci  # Don't use gci (a tool that control golang package import order and make it always deterministic) to check code
+    - gofumpt  # Don't use gofumpt (a stricter version of gofmt) to check codes
+    - godot  # Don't check if comments end in a period
+    - godox  # Don't complain of comments contain "TODO/BUG/FIXME"
+    - gomnd  # Don't complain of 'magic number'
+    - tagliatelle  # Don't complain of struct tag style
+    - whitespace  # Some of its advices will even hurt readability
+    - gocognit  # Do not check congnitive complexity
+    - nestif  # Do not check nested if
+    - scopelint  # Deprecated linter
+    - maligned  # Deprecated
+    - interfacer # Deprecated
+    - golint  # Deprecated
+  enable-all: true
