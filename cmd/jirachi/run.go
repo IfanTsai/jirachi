@@ -14,11 +14,11 @@ func main() {
 	for {
 		fmt.Printf("jirachi > ")
 		reader.Scan()
-		node, err := lexer.Run("stdin", reader.Text())
+		ast, err := lexer.Run("stdin", reader.Text())
 		if err != nil {
 			fmt.Printf("%+v\n", err)
 		} else {
-			fmt.Printf("%v\n", node)
+			fmt.Printf("%v\n", ast)
 		}
 	}
 }
