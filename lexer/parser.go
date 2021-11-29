@@ -1,29 +1,35 @@
 package lexer
 
 import (
-	mapset "github.com/deckarep/golang-set"
+	"github.com/IfanTsai/jirachi/pkg/set"
+	"github.com/pkg/errors"
 )
 
 type JNodeType int
 
 const (
-	NUMBER JNodeType = iota
-	OP
+	Number JNodeType = iota
+	BinOp
+	UnaryOp
 )
 
 type JNode struct {
 	Type      JNodeType
 	Token     *JToken
-	LeftNode  *JNode
-	RightNode *JNode
+	LeftNode  *JNode // for BinOp
+	RightNode *JNode // for BinOp
+	Node      *JNode // for UnaryOp
 }
 
 func (n *JNode) String() string {
-	if n.Type == OP {
+	switch n.Type {
+	case BinOp:
 		return "(" + n.LeftNode.String() + " " + n.Token.String() + " " + n.RightNode.String() + ")"
+	case UnaryOp:
+		return "(" + n.Token.String() + " " + n.Node.String() + ")"
+	default:
+		return n.Token.String()
 	}
-
-	return n.Token.String()
 }
 
 type JParser struct {
@@ -39,10 +45,25 @@ func NewJParser(tokens []*JToken, tokenIndex int) *JParser {
 	}
 }
 
-func (p *JParser) Parse() *JNode {
+func (p *JParser) Parse() (*JNode, error) {
 	p.advance()
 
-	return p.expr()
+	ast, err := p.expr()
+	if err != nil {
+		return nil, err
+	}
+
+	if p.CurrentToken.Type != EOF {
+		return nil, errors.Wrap(&JInvalidSyntaxError{
+			JError: &JError{
+				StartPos: p.CurrentToken.StartPos,
+				EndPos:   p.CurrentToken.EndPos,
+			},
+			Details: "Expected '+', '-', '*' or '/'",
+		}, "failed to parse expr")
+	}
+
+	return ast, nil
 }
 
 func (p *JParser) advance() {
@@ -52,46 +73,96 @@ func (p *JParser) advance() {
 	}
 }
 
-func (p *JParser) factor() *JNode {
+/**
+ * expr: term ( (PLUS | MINUS) term )*
+ * term : factor ( ( MUL | DIV ) factor )*
+ * factor: INT | FLOAT
+ *         ( PLUS | MINUS ) factor
+ *         LPAREN expr RPAREN
+ */
+func (p *JParser) factor() (*JNode, error) {
 	currentToken := p.CurrentToken
-	if currentToken == nil {
-		return nil
-	}
 
 	switch currentToken.Type {
 	case INT, FLOAT:
 		p.advance()
+
 		return &JNode{
-			Type:  NUMBER,
+			Type:  Number,
 			Token: currentToken,
+		}, nil
+	case PLUS, MINUS:
+		p.advance()
+		factor, err := p.factor()
+		if err != nil {
+			return nil, err
 		}
+
+		return &JNode{
+			Type:  UnaryOp,
+			Token: currentToken,
+			Node:  factor,
+		}, nil
+	case LPAREN:
+		p.advance()
+		expr, err := p.expr()
+		if err != nil {
+			return nil, err
+		}
+
+		if p.CurrentToken.Type != RPAREN {
+			return nil, errors.Wrap(&JInvalidSyntaxError{
+				JError: &JError{
+					StartPos: currentToken.StartPos,
+					EndPos:   currentToken.EndPos,
+				},
+				Details: "Expected ')'",
+			}, "failed to parse LPAREN")
+		}
+
+		p.advance()
+
+		return expr, nil
+	default:
+		return nil, errors.Wrap(&JInvalidSyntaxError{
+			JError: &JError{
+				StartPos: currentToken.StartPos,
+				EndPos:   currentToken.EndPos,
+			},
+			Details: "Expected '+', '-', '*' or '/'",
+		}, "failed to parse factor")
+	}
+}
+
+func (p *JParser) term() (*JNode, error) {
+	return p.binOp(p.factor, set.NewSet(MUL, DIV))
+}
+
+func (p *JParser) expr() (*JNode, error) {
+	return p.binOp(p.term, set.NewSet(PLUS, MINUS))
+}
+
+func (p *JParser) binOp(getNodeFunc func() (*JNode, error), ops *set.Set) (*JNode, error) {
+	leftNode, err := getNodeFunc()
+	if err != nil {
+		return nil, err
 	}
 
-	return nil
-}
-
-func (p *JParser) term() *JNode {
-	return p.binOp(p.factor, mapset.NewSet(MUL, DIV))
-}
-
-func (p *JParser) expr() *JNode {
-	return p.binOp(p.term, mapset.NewSet(PLUS, MINUS))
-}
-
-func (p *JParser) binOp(fun func() *JNode, ops mapset.Set) *JNode {
-	leftNode := fun()
-
-	for p.CurrentToken != nil && ops.Contains(p.CurrentToken.Type) {
+	for ops.Contains(p.CurrentToken.Type) {
 		opToken := p.CurrentToken
 		p.advance()
-		rightNode := fun()
+		rightNode, err := getNodeFunc()
+		if err != nil {
+			return nil, err
+		}
+
 		leftNode = &JNode{
-			Type:      OP,
+			Type:      BinOp,
 			LeftNode:  leftNode,
 			RightNode: rightNode,
 			Token:     opToken,
 		}
 	}
 
-	return leftNode
+	return leftNode, nil
 }

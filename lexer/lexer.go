@@ -9,14 +9,16 @@ import (
 
 const DIGITS = "0123456789"
 
-type IllegalCharacterError struct {
-	*JPosition
-	IllegalChar byte
-}
+func Run(filename, text string) (*JNode, error) {
+	// generate tokens
+	tokens, err := NewJLexer(filename, text).MakeTokens()
+	if err != nil {
+		return nil, err
+	}
+	fmt.Printf("%v\n", tokens)
 
-func (e *IllegalCharacterError) Error() string {
-	return fmt.Sprintf("illegal character '%c'\nFile <%s>, line %d, col %d",
-		e.IllegalChar, e.Filename, e.Ln, e.Col)
+	// generate AST
+	return NewJParser(tokens, -1).Parse()
 }
 
 type JLexer struct {
@@ -24,23 +26,14 @@ type JLexer struct {
 	Pos  *JPosition
 }
 
-func Run(filename, text string) (*JNode, error) {
-	tokens, err := NewJLexer(filename, text).makeTokens()
-	if err != nil {
-		return nil, err
-	}
-
-	return NewJParser(tokens, -1).Parse(), nil
-}
-
 func NewJLexer(filename, text string) *JLexer {
 	return &JLexer{
 		Text: []byte(text),
-		Pos:  NewJPosition(-1, 0, 0, filename),
+		Pos:  NewJPosition(-1, -1, 0, filename, text),
 	}
 }
 
-func (l *JLexer) makeTokens() ([]*JToken, error) {
+func (l *JLexer) MakeTokens() ([]*JToken, error) {
 	tokens := make([]*JToken, 0, len(l.Text))
 
 	for advanceAble := l.advance(); advanceAble; {
@@ -53,30 +46,38 @@ func (l *JLexer) makeTokens() ([]*JToken, error) {
 			token, advanceAble = l.makeNumberToken()
 			tokens = append(tokens, token)
 		case char == '+':
-			tokens = append(tokens, NewJToken(PLUS, ""))
+			tokens = append(tokens, NewJToken(PLUS, "", l.Pos, l.Pos))
 			advanceAble = l.advance()
 		case char == '-':
-			tokens = append(tokens, NewJToken(MINUS, ""))
+			tokens = append(tokens, NewJToken(MINUS, "", l.Pos, l.Pos))
 			advanceAble = l.advance()
 		case char == '*':
-			tokens = append(tokens, NewJToken(MUL, ""))
+			tokens = append(tokens, NewJToken(MUL, "", l.Pos, l.Pos))
 			advanceAble = l.advance()
 		case char == '/':
-			tokens = append(tokens, NewJToken(DIV, ""))
+			tokens = append(tokens, NewJToken(DIV, "", l.Pos, l.Pos))
 			advanceAble = l.advance()
 		case char == '(':
-			tokens = append(tokens, NewJToken(LPAREN, ""))
+			tokens = append(tokens, NewJToken(LPAREN, "", l.Pos, l.Pos))
 			advanceAble = l.advance()
 		case char == ')':
-			tokens = append(tokens, NewJToken(RPAREN, ""))
+			tokens = append(tokens, NewJToken(RPAREN, "", l.Pos, l.Pos))
 			advanceAble = l.advance()
 		default:
-			return nil, errors.Wrap(&IllegalCharacterError{
+			startPos := l.Pos.Copy()
+			l.advance()
+
+			return nil, errors.Wrap(&JIllegalCharacterError{
 				IllegalChar: char,
-				JPosition:   l.Pos,
+				JError: &JError{
+					StartPos: startPos,
+					EndPos:   l.Pos,
+				},
 			}, "failed to parse token")
 		}
 	}
+
+	tokens = append(tokens, NewJToken(EOF, "", l.Pos, l.Pos))
 
 	return tokens, nil
 }
@@ -84,7 +85,8 @@ func (l *JLexer) makeTokens() ([]*JToken, error) {
 func (l *JLexer) makeNumberToken() (*JToken, bool) {
 	advanceAble := true
 	isFloat := false
-	numStr := ""
+	startPos := l.Pos.Copy()
+	var numStrBuilder strings.Builder
 
 	for {
 		char := l.Text[l.Pos.Index]
@@ -102,7 +104,7 @@ func (l *JLexer) makeNumberToken() (*JToken, bool) {
 			isFloat = true
 		}
 
-		numStr += string(char)
+		numStrBuilder.WriteByte(char)
 
 		if !l.advance() {
 			advanceAble = false
@@ -112,14 +114,16 @@ func (l *JLexer) makeNumberToken() (*JToken, bool) {
 	}
 
 	if isFloat {
-		return NewJToken(FLOAT, numStr), advanceAble
+		return NewJToken(FLOAT, numStrBuilder.String(), startPos, l.Pos), advanceAble
 	}
 
-	return NewJToken(INT, numStr), advanceAble
+	return NewJToken(INT, numStrBuilder.String(), startPos, l.Pos), advanceAble
 }
 
 func (l *JLexer) advance() bool {
 	if l.Pos.Index+1 >= len(l.Text) {
+		l.Pos.Advance(l.Text)
+
 		return false
 	}
 
