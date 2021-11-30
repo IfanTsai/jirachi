@@ -1,75 +1,72 @@
 package lexer
 
 import (
-	"fmt"
+	"strconv"
 	"strings"
+
+	"github.com/IfanTsai/jirachi/common"
+
+	"github.com/IfanTsai/jirachi/token"
 
 	"github.com/pkg/errors"
 )
 
-const DIGITS = "0123456789"
-
-func Run(filename, text string) (*JNode, error) {
-	// generate tokens
-	tokens, err := NewJLexer(filename, text).MakeTokens()
-	if err != nil {
-		return nil, err
-	}
-	fmt.Printf("%v\n", tokens)
-
-	// generate AST
-	return NewJParser(tokens, -1).Parse()
-}
-
 type JLexer struct {
 	Text []byte
-	Pos  *JPosition
+	Pos  *common.JPosition
 }
 
 func NewJLexer(filename, text string) *JLexer {
 	return &JLexer{
 		Text: []byte(text),
-		Pos:  NewJPosition(-1, -1, 0, filename, text),
+		Pos:  common.NewJPosition(-1, -1, 0, filename, text),
 	}
 }
 
-func (l *JLexer) MakeTokens() ([]*JToken, error) {
-	tokens := make([]*JToken, 0, len(l.Text))
+func (l *JLexer) MakeTokens() ([]*token.JToken, error) {
+	tokens := make([]*token.JToken, 0, len(l.Text))
 
 	for advanceAble := l.advance(); advanceAble; {
 		char := l.Text[l.Pos.Index]
 		switch {
 		case char == ' ' || char == '\t':
 			advanceAble = l.advance()
-		case strings.IndexByte(DIGITS, char) != -1:
-			var token *JToken
-			token, advanceAble = l.makeNumberToken()
-			tokens = append(tokens, token)
+		case isDigit(char):
+			var numberToken *token.JToken
+			var err error
+			numberToken, advanceAble, err = l.makeNumberToken()
+			if err != nil {
+				return nil, err
+			}
+			tokens = append(tokens, numberToken)
 		case char == '+':
-			tokens = append(tokens, NewJToken(PLUS, "", l.Pos, l.Pos))
+			tokens = append(tokens, token.NewJToken(token.PLUS, nil, l.Pos, l.Pos))
 			advanceAble = l.advance()
 		case char == '-':
-			tokens = append(tokens, NewJToken(MINUS, "", l.Pos, l.Pos))
+			tokens = append(tokens, token.NewJToken(token.MINUS, nil, l.Pos, l.Pos))
 			advanceAble = l.advance()
 		case char == '*':
-			tokens = append(tokens, NewJToken(MUL, "", l.Pos, l.Pos))
+			tokens = append(tokens, token.NewJToken(token.MUL, nil, l.Pos, l.Pos))
 			advanceAble = l.advance()
 		case char == '/':
-			tokens = append(tokens, NewJToken(DIV, "", l.Pos, l.Pos))
+			tokens = append(tokens, token.NewJToken(token.DIV, nil, l.Pos, l.Pos))
+			advanceAble = l.advance()
+		case char == '^':
+			tokens = append(tokens, token.NewJToken(token.POW, nil, l.Pos, l.Pos))
 			advanceAble = l.advance()
 		case char == '(':
-			tokens = append(tokens, NewJToken(LPAREN, "", l.Pos, l.Pos))
+			tokens = append(tokens, token.NewJToken(token.LPAREN, nil, l.Pos, l.Pos))
 			advanceAble = l.advance()
 		case char == ')':
-			tokens = append(tokens, NewJToken(RPAREN, "", l.Pos, l.Pos))
+			tokens = append(tokens, token.NewJToken(token.RPAREN, nil, l.Pos, l.Pos))
 			advanceAble = l.advance()
 		default:
 			startPos := l.Pos.Copy()
 			l.advance()
 
-			return nil, errors.Wrap(&JIllegalCharacterError{
+			return nil, errors.Wrap(&common.JIllegalCharacterError{
 				IllegalChar: char,
-				JError: &JError{
+				JError: &common.JError{
 					StartPos: startPos,
 					EndPos:   l.Pos,
 				},
@@ -77,12 +74,12 @@ func (l *JLexer) MakeTokens() ([]*JToken, error) {
 		}
 	}
 
-	tokens = append(tokens, NewJToken(EOF, "", l.Pos, l.Pos))
+	tokens = append(tokens, token.NewJToken(token.EOF, nil, l.Pos, l.Pos))
 
 	return tokens, nil
 }
 
-func (l *JLexer) makeNumberToken() (*JToken, bool) {
+func (l *JLexer) makeNumberToken() (*token.JToken, bool, error) {
 	advanceAble := true
 	isFloat := false
 	startPos := l.Pos.Copy()
@@ -91,8 +88,7 @@ func (l *JLexer) makeNumberToken() (*JToken, bool) {
 	for {
 		char := l.Text[l.Pos.Index]
 
-		if strings.IndexByte(DIGITS+".", char) == -1 {
-
+		if char != '.' && !isDigit(char) {
 			break
 		}
 
@@ -114,10 +110,19 @@ func (l *JLexer) makeNumberToken() (*JToken, bool) {
 	}
 
 	if isFloat {
-		return NewJToken(FLOAT, numStrBuilder.String(), startPos, l.Pos), advanceAble
+		floatNum, err := strconv.ParseFloat(numStrBuilder.String(), 64)
+		if err != nil {
+			return nil, false, errors.Wrapf(err, "failed to convert %s to float64", numStrBuilder.String())
+		}
+		return token.NewJToken(token.FLOAT, floatNum, startPos, l.Pos), advanceAble, nil
 	}
 
-	return NewJToken(INT, numStrBuilder.String(), startPos, l.Pos), advanceAble
+	intNum, err := strconv.Atoi(numStrBuilder.String())
+	if err != nil {
+		return nil, false, errors.Wrapf(err, "failed to convert %s to int", numStrBuilder.String())
+	}
+
+	return token.NewJToken(token.INT, intNum, startPos, l.Pos), advanceAble, nil
 }
 
 func (l *JLexer) advance() bool {
@@ -130,4 +135,8 @@ func (l *JLexer) advance() bool {
 	l.Pos.Advance(l.Text)
 
 	return true
+}
+
+func isDigit(char byte) bool {
+	return '0' <= char && char <= '9'
 }

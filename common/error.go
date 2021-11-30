@@ -1,4 +1,4 @@
-package lexer
+package common
 
 import (
 	"fmt"
@@ -34,6 +34,24 @@ type JInvalidSyntaxError struct {
 
 func (e *JInvalidSyntaxError) Error() string {
 	return e.ErrorString("Invalid Syntax", e.Details)
+}
+
+type JRunTimeError struct {
+	*JError
+	Details string
+}
+
+func (e *JRunTimeError) Error() string {
+	return e.ErrorString("Runtime Error", e.Details)
+}
+
+type JNumberTypeError struct {
+	*JError
+	Number interface{}
+}
+
+func (e *JNumberTypeError) Error() string {
+	return e.ErrorString("Illegal Number Type", fmt.Sprintf("'%v'", e.Number))
 }
 
 func stringWithArrows(text string, startPos, endPos *JPosition) string {
