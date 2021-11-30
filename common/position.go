@@ -1,4 +1,4 @@
-package lexer
+package common
 
 type JPosition struct {
 	Index    int

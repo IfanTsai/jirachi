@@ -1,0 +1,175 @@
+package parser
+
+import (
+	"github.com/IfanTsai/jirachi/common"
+	"github.com/IfanTsai/jirachi/pkg/set"
+	"github.com/IfanTsai/jirachi/token"
+	"github.com/pkg/errors"
+)
+
+type getNodeFunc func() (*JNode, error)
+
+type JParser struct {
+	TokenIndex   int
+	Tokens       []*token.JToken
+	CurrentToken *token.JToken
+}
+
+func NewJParser(tokens []*token.JToken, tokenIndex int) *JParser {
+	return &JParser{
+		Tokens:     tokens,
+		TokenIndex: tokenIndex,
+	}
+}
+
+func (p *JParser) Parse() (*JNode, error) {
+	p.advance()
+
+	ast, err := p.expr()
+	if err != nil {
+		return nil, err
+	}
+
+	if p.CurrentToken.Type != token.EOF {
+		return nil, errors.Wrap(&common.JInvalidSyntaxError{
+			JError: &common.JError{
+				StartPos: p.CurrentToken.StartPos,
+				EndPos:   p.CurrentToken.EndPos,
+			},
+			Details: "Expected '+', '-', '*' or '/'",
+		}, "failed to parse expr")
+	}
+
+	return ast, nil
+}
+
+func (p *JParser) advance() {
+	p.TokenIndex++
+	if p.TokenIndex < len(p.Tokens) {
+		p.CurrentToken = p.Tokens[p.TokenIndex]
+	}
+}
+
+/**
+ * expr: term ( (PLUS | MINUS) term )*
+ *
+ * term : factor ( ( MUL | DIV ) factor )*
+ *
+ * factor: ( PLUS | MINUS ) factor
+ *          power
+ *
+ * power: atom ( POW factor )*
+ *
+ * atom: INT | FLOAT
+ *       LPAREN expr RPAREN
+ */
+func (p *JParser) atom() (*JNode, error) {
+	currentToken := p.CurrentToken
+
+	switch currentToken.Type {
+	case token.INT, token.FLOAT:
+		p.advance()
+
+		return &JNode{
+			Type:     Number,
+			Token:    currentToken,
+			StartPos: currentToken.StartPos,
+			EndPos:   currentToken.EndPos,
+		}, nil
+	case token.LPAREN:
+		p.advance()
+		expr, err := p.expr()
+		if err != nil {
+			return nil, err
+		}
+
+		if p.CurrentToken.Type != token.RPAREN {
+			return nil, errors.Wrap(&common.JInvalidSyntaxError{
+				JError: &common.JError{
+					StartPos: currentToken.StartPos,
+					EndPos:   currentToken.EndPos,
+				},
+				Details: "Expected ')'",
+			}, "failed to parse LPAREN")
+		}
+
+		p.advance()
+
+		return expr, nil
+	default:
+		return nil, errors.Wrap(&common.JInvalidSyntaxError{
+			JError: &common.JError{
+				StartPos: currentToken.StartPos,
+				EndPos:   currentToken.EndPos,
+			},
+			Details: "Expected int, float, '+', '-' or '('",
+		}, "failed to parse factor")
+	}
+}
+
+func (p *JParser) power() (*JNode, error) {
+	return p.binOp(p.atom, set.NewSet(token.POW), p.factor)
+}
+
+func (p *JParser) factor() (*JNode, error) {
+	currentToken := p.CurrentToken
+
+	switch currentToken.Type {
+	case token.PLUS, token.MINUS:
+		p.advance()
+		factor, err := p.factor()
+		if err != nil {
+			return nil, err
+		}
+
+		return &JNode{
+			Type:     UnaryOp,
+			Token:    currentToken,
+			Node:     factor,
+			StartPos: currentToken.StartPos,
+			EndPos:   factor.EndPos,
+		}, nil
+
+	default:
+		return p.power()
+	}
+}
+
+func (p *JParser) term() (*JNode, error) {
+	return p.binOp(p.factor, set.NewSet(token.MUL, token.DIV), nil)
+}
+
+func (p *JParser) expr() (*JNode, error) {
+	return p.binOp(p.term, set.NewSet(token.PLUS, token.MINUS), nil)
+}
+
+func (p *JParser) binOp(getNodeFuncA getNodeFunc, ops *set.Set, getNodeFuncB getNodeFunc) (*JNode, error) {
+	if getNodeFuncB == nil {
+		getNodeFuncB = getNodeFuncA
+	}
+
+	leftNode, err := getNodeFuncA()
+	if err != nil {
+		return nil, err
+	}
+
+	for ops.Contains(p.CurrentToken.Type) {
+		opToken := p.CurrentToken
+		p.advance()
+		rightNode, err := getNodeFuncB()
+		if err != nil {
+			return nil, err
+		}
+
+		leftNode = &JNode{
+			Type:      BinOp,
+			LeftNode:  leftNode,
+			RightNode: rightNode,
+			Token:     opToken,
+			StartPos:  leftNode.StartPos,
+			EndPos:    rightNode.EndPos,
+		}
+	}
+
+	return leftNode, nil
+}

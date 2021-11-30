@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/IfanTsai/jirachi/lexer"
+	"github.com/IfanTsai/jirachi/interpreter"
 )
 
 func main() {
@@ -14,7 +14,7 @@ func main() {
 	for {
 		fmt.Printf("jirachi > ")
 		reader.Scan()
-		ast, err := lexer.Run("stdin", reader.Text())
+		ast, err := interpreter.Run("stdin", reader.Text())
 		if err != nil {
 			fmt.Printf("%+v\n", err)
 		} else {
