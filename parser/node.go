@@ -9,6 +9,8 @@ type JNodeType int
 
 const (
 	Number JNodeType = iota
+	VarAssign
+	VarAccess
 	BinOp
 	UnaryOp
 )
@@ -19,7 +21,7 @@ type JNode struct {
 	Token     *token.JToken
 	LeftNode  *JNode // for BinOp
 	RightNode *JNode // for BinOp
-	Node      *JNode // for UnaryOp
+	Node      *JNode // for UnaryOp, VarAssign
 	StartPos  *common.JPosition
 	EndPos    *common.JPosition
 }
@@ -28,7 +30,7 @@ func (n *JNode) String() string {
 	switch n.Type {
 	case BinOp:
 		return "(" + n.LeftNode.String() + " " + n.Token.String() + " " + n.RightNode.String() + ")"
-	case UnaryOp:
+	case VarAssign, UnaryOp:
 		return "(" + n.Token.String() + " " + n.Node.String() + ")"
 	default:
 		return n.Token.String()

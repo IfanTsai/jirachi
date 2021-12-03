@@ -39,6 +39,10 @@ func (l *JLexer) MakeTokens() ([]*token.JToken, error) {
 				return nil, err
 			}
 			tokens = append(tokens, numberToken)
+		case isLetters(char):
+			var numberToken *token.JToken
+			numberToken, advanceAble = l.makeIdentifierToken()
+			tokens = append(tokens, numberToken)
 		case char == '+':
 			tokens = append(tokens, token.NewJToken(token.PLUS, nil, l.Pos, l.Pos))
 			advanceAble = l.advance()
@@ -53,6 +57,9 @@ func (l *JLexer) MakeTokens() ([]*token.JToken, error) {
 			advanceAble = l.advance()
 		case char == '^':
 			tokens = append(tokens, token.NewJToken(token.POW, nil, l.Pos, l.Pos))
+			advanceAble = l.advance()
+		case char == '=':
+			tokens = append(tokens, token.NewJToken(token.EQ, nil, l.Pos, l.Pos))
 			advanceAble = l.advance()
 		case char == '(':
 			tokens = append(tokens, token.NewJToken(token.LPAREN, nil, l.Pos, l.Pos))
@@ -125,6 +132,35 @@ func (l *JLexer) makeNumberToken() (*token.JToken, bool, error) {
 	return token.NewJToken(token.INT, intNum, startPos, l.Pos), advanceAble, nil
 }
 
+func (l *JLexer) makeIdentifierToken() (*token.JToken, bool) {
+	advanceAble := true
+	startPos := l.Pos.Copy()
+	var identifierStrBuilder strings.Builder
+
+	for {
+		char := l.Text[l.Pos.Index]
+
+		if !isLetters(char) && !isDigit(char) {
+			break
+		}
+
+		identifierStrBuilder.WriteByte(char)
+
+		if !l.advance() {
+			advanceAble = false
+
+			break
+		}
+	}
+
+	identifier := identifierStrBuilder.String()
+	if token.IsKeyword(identifier) {
+		return token.NewJToken(token.KEYWORD, identifier, startPos, l.Pos), advanceAble
+	}
+
+	return token.NewJToken(token.IDENTIFIER, identifier, startPos, l.Pos), advanceAble
+}
+
 func (l *JLexer) advance() bool {
 	if l.Pos.Index+1 >= len(l.Text) {
 		l.Pos.Advance(l.Text)
@@ -139,4 +175,8 @@ func (l *JLexer) advance() bool {
 
 func isDigit(char byte) bool {
 	return '0' <= char && char <= '9'
+}
+
+func isLetters(char byte) bool {
+	return ('a' <= char && char <= 'z') || ('A' <= char && char <= 'Z') || char == '_'
 }

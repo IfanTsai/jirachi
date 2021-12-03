@@ -4,22 +4,33 @@ import (
 	"encoding/json"
 	"strconv"
 
+	"github.com/IfanTsai/jirachi/pkg/set"
+
 	"github.com/IfanTsai/jirachi/common"
 )
 
 type JTokenType string
 
 const (
-	INT    JTokenType = "INT"
-	FLOAT  JTokenType = "FLOAT"
-	PLUS   JTokenType = "PLUS"
-	MINUS  JTokenType = "MINUS"
-	MUL    JTokenType = "MUL"
-	DIV    JTokenType = "DIV"
-	POW    JTokenType = "POW"
-	LPAREN JTokenType = "LPAREN"
-	RPAREN JTokenType = "RPAREN"
-	EOF    JTokenType = "EOF"
+	INT        JTokenType = "INT"
+	FLOAT      JTokenType = "FLOAT"
+	IDENTIFIER JTokenType = "IDENTIFIER"
+	KEYWORD    JTokenType = "KEYWORD"
+	PLUS       JTokenType = "PLUS"
+	MINUS      JTokenType = "MINUS"
+	MUL        JTokenType = "MUL"
+	DIV        JTokenType = "DIV"
+	POW        JTokenType = "POW"
+	EQ         JTokenType = "EQ"
+	LPAREN     JTokenType = "LPAREN"
+	RPAREN     JTokenType = "RPAREN"
+	EOF        JTokenType = "EOF"
+)
+
+var KEYWORDS = set.NewSet(
+	"IF",
+	"ELIF",
+	"ELSE",
 )
 
 type JToken struct {
@@ -44,6 +55,10 @@ func NewJToken(tokenType JTokenType, value interface{}, startPos, endPos *common
 	return token
 }
 
+func (t *JToken) Match(typ JTokenType, value interface{}) bool {
+	return t.Type == typ && t.Value == value
+}
+
 func (t *JToken) String() string {
 	if t.Value == nil {
 		return string(t.Type)
@@ -62,4 +77,8 @@ func (t *JToken) ValueToString() string {
 		newValue, _ := json.Marshal(value)
 		return string(newValue)
 	}
+}
+
+func IsKeyword(identifier string) bool {
+	return KEYWORDS.Contains(identifier)
 }

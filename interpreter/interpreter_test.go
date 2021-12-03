@@ -7,7 +7,7 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/IfanTsai/jirachi/interpreter"
-	lexer2 "github.com/IfanTsai/jirachi/lexer"
+	"github.com/IfanTsai/jirachi/lexer"
 	"github.com/IfanTsai/jirachi/parser"
 	"github.com/stretchr/testify/require"
 )
@@ -17,6 +17,7 @@ func TestJInterpreter_Visit(t *testing.T) {
 	testCases := []struct {
 		name        string
 		text        string
+		preRun      func(t *testing.T)
 		checkResult func(t *testing.T, number *interpreter.JNumber, err error)
 	}{
 		{
@@ -47,6 +48,52 @@ func TestJInterpreter_Visit(t *testing.T) {
 				require.NoError(t, err)
 				require.IsType(t, 0, number.Value)
 				require.Equal(t, 1, number.Value.(int))
+			},
+		},
+		{
+			name: "OK4",
+			text: "1 + (a = 2)",
+			checkResult: func(t *testing.T, number *interpreter.JNumber, err error) {
+				t.Helper()
+				require.NoError(t, err)
+				require.IsType(t, 0, number.Value)
+				require.Equal(t, 3, number.Value.(int))
+
+				varNumber := interpreter.GlobalSymbolTable.Get("a")
+				require.IsType(t, &interpreter.JNumber{}, varNumber)
+				require.IsType(t, 0, varNumber.(*interpreter.JNumber).Value)
+				require.Equal(t, 2, varNumber.(*interpreter.JNumber).Value)
+			},
+		},
+		{
+			name: "OK4",
+			text: "a + 3",
+			preRun: func(t *testing.T) {
+				t.Helper()
+
+				tokens, err := lexer.NewJLexer("stdin", "a = 5").MakeTokens()
+				require.NoError(t, err)
+				require.NotEmpty(t, tokens)
+
+				ast, err := parser.NewJParser(tokens, -1).Parse()
+				require.NoError(t, err)
+				require.NotNil(t, ast)
+
+				context := common.NewJContext("test", interpreter.GlobalSymbolTable, nil, nil)
+				number, err := interpreter.NewJInterpreter(context).Visit(ast)
+				require.NoError(t, err)
+				require.NotNil(t, number)
+			},
+			checkResult: func(t *testing.T, number *interpreter.JNumber, err error) {
+				t.Helper()
+				require.NoError(t, err)
+				require.IsType(t, 0, number.Value)
+				require.Equal(t, 8, number.Value.(int))
+
+				varNumber := interpreter.GlobalSymbolTable.Get("a")
+				require.IsType(t, &interpreter.JNumber{}, varNumber)
+				require.IsType(t, 0, varNumber.(*interpreter.JNumber).Value)
+				require.Equal(t, 5, varNumber.(*interpreter.JNumber).Value)
 			},
 		},
 		{
@@ -82,13 +129,55 @@ func TestJInterpreter_Visit(t *testing.T) {
 				require.Nil(t, number)
 			},
 		},
+		{
+			name: "Division by zero variable",
+			text: "13 / (a - 2)",
+			preRun: func(t *testing.T) {
+				t.Helper()
+
+				tokens, err := lexer.NewJLexer("stdin", "a = 2").MakeTokens()
+				require.NoError(t, err)
+				require.NotEmpty(t, tokens)
+
+				ast, err := parser.NewJParser(tokens, -1).Parse()
+				require.NoError(t, err)
+				require.NotNil(t, ast)
+
+				context := common.NewJContext("test", interpreter.GlobalSymbolTable, nil, nil)
+				number, err := interpreter.NewJInterpreter(context).Visit(ast)
+				require.NoError(t, err)
+				require.NotNil(t, number)
+			},
+			checkResult: func(t *testing.T, number *interpreter.JNumber, err error) {
+				t.Helper()
+				require.Error(t, err)
+				require.IsType(t, &common.JRunTimeError{}, errors.Cause(err))
+				require.Contains(t, err.Error(), "Runtime Error: Division by zero")
+				require.Nil(t, number)
+			},
+		},
+		{
+			name: "Variable is not defined",
+			text: "13 / (abc - 2)",
+			checkResult: func(t *testing.T, number *interpreter.JNumber, err error) {
+				t.Helper()
+				require.Error(t, err)
+				require.IsType(t, &common.JRunTimeError{}, errors.Cause(err))
+				require.Contains(t, err.Error(), "Runtime Error: 'abc' is not defined")
+				require.Nil(t, number)
+			},
+		},
 	}
 
 	for i := range testCases {
 		testCase := testCases[i]
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
-			tokens, err := lexer2.NewJLexer("stdin", testCase.text).MakeTokens()
+			if testCase.preRun != nil {
+				testCase.preRun(t)
+			}
+
+			tokens, err := lexer.NewJLexer("stdin", testCase.text).MakeTokens()
 			require.NoError(t, err)
 			require.NotEmpty(t, tokens)
 
@@ -96,7 +185,8 @@ func TestJInterpreter_Visit(t *testing.T) {
 			require.NoError(t, err)
 			require.NotNil(t, ast)
 
-			number, err := interpreter.NewJInterpreter().Visit(ast)
+			context := common.NewJContext("test", interpreter.GlobalSymbolTable, nil, nil)
+			number, err := interpreter.NewJInterpreter(context).Visit(ast)
 			testCase.checkResult(t, number, err)
 		})
 	}

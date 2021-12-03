@@ -21,7 +21,7 @@ func TestJLexer_MakeTokens(t *testing.T) {
 		checkResult func(t *testing.T, tokens []*token.JToken, err error)
 	}{
 		{
-			name: "OK",
+			name: "OK1",
 			text: "(-1 + 2) * 13 / 24 - 5.8",
 			checkResult: func(t *testing.T, tokens []*token.JToken, err error) {
 				t.Helper()
@@ -31,6 +31,25 @@ func TestJLexer_MakeTokens(t *testing.T) {
 				resStr := []string{
 					"LPAREN", "MINUS", "INT:1", "PLUS", "INT:2", "RPAREN", "MUL",
 					"INT:13", "DIV", "INT:24", "MINUS", "FLOAT:5.8", "EOF",
+				}
+				require.Len(t, tokens, len(resStr))
+				for index, tok := range tokens {
+					require.Equal(t, resStr[index], tok.String())
+				}
+			},
+		},
+		{
+			name: "OK2",
+			text: "1 + (a = 2)",
+			checkResult: func(t *testing.T, tokens []*token.JToken, err error) {
+				t.Helper()
+				require.NoError(t, err)
+				require.NotEmpty(t, tokens)
+
+				resStr := []string{
+					"INT:1", "PLUS", "LPAREN",
+					"IDENTIFIER:\"a\"", "EQ", "INT:2",
+					"RPAREN", "EOF",
 				}
 				require.Len(t, tokens, len(resStr))
 				for index, tok := range tokens {
