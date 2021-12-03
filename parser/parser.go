@@ -105,7 +105,7 @@ func (p *JParser) atom() (*JNode, error) {
 				StartPos: currentToken.StartPos,
 				EndPos:   currentToken.EndPos,
 			},
-			Details: "Expected int, float, identifier, '+', '-' or '('",
+			Details: "Expected int, float, identifier, '+', '-', '(' or 'NOT'",
 		}, "failed to parse factor")
 	}
 }
@@ -142,6 +142,33 @@ func (p *JParser) term() (*JNode, error) {
 	return p.binOp(p.factor, set.NewSet(token.MUL, token.DIV), nil)
 }
 
+func (p *JParser) arithmeticExpr() (*JNode, error) {
+	return p.binOp(p.term, set.NewSet(token.PLUS, token.MINUS), nil)
+}
+
+func (p *JParser) compareExpr() (*JNode, error) {
+	currentToken := p.CurrentToken
+
+	if currentToken.Match(token.KEYWORD, token.NOT) {
+		p.advance()
+
+		compExpr, err := p.compareExpr()
+		if err != nil {
+			return nil, err
+		}
+
+		return &JNode{
+			Type:     UnaryOp,
+			Token:    currentToken,
+			Node:     compExpr,
+			StartPos: currentToken.StartPos,
+			EndPos:   compExpr.EndPos,
+		}, nil
+	}
+
+	return p.binOp(p.arithmeticExpr, set.NewSet(token.EE, token.NE, token.LT, token.LTE, token.GT, token.GTE), nil)
+}
+
 func (p *JParser) expr() (*JNode, error) {
 	// check if it is an assignment expression
 	if p.CurrentToken.Type == token.IDENTIFIER {
@@ -176,12 +203,9 @@ func (p *JParser) expr() (*JNode, error) {
 			// go back when it is not an assignment expression
 			p.back()
 		}
-	} else if p.CurrentToken.Type == token.KEYWORD {
-		// TODO: check keyword
-		_ = p.CurrentToken
 	}
 
-	return p.binOp(p.term, set.NewSet(token.PLUS, token.MINUS), nil)
+	return p.binOp(p.compareExpr, set.NewSet(token.AND, token.OR), nil)
 }
 
 func (p *JParser) binOp(getNodeFuncA getNodeFunc, ops *set.Set, getNodeFuncB getNodeFunc) (*JNode, error) {
@@ -194,7 +218,9 @@ func (p *JParser) binOp(getNodeFuncA getNodeFunc, ops *set.Set, getNodeFuncB get
 		return nil, err
 	}
 
-	for ops.Contains(p.CurrentToken.Type) {
+	for (p.CurrentToken.Type == token.KEYWORD && ops.Contains(p.CurrentToken.Value)) ||
+		ops.Contains(p.CurrentToken.Type) {
+
 		opToken := p.CurrentToken
 		p.advance()
 		rightNode, err := getNodeFuncB()
