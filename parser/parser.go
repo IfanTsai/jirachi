@@ -36,7 +36,7 @@ func (p *JParser) Parse() (*JNode, error) {
 				StartPos: p.CurrentToken.StartPos,
 				EndPos:   p.CurrentToken.EndPos,
 			},
-			Details: "Expected '+', '-', '*' or '/'",
+			Details: "Expected '+', '-', '*', '/' or '^'",
 		}, "failed to parse expr")
 	}
 
@@ -50,19 +50,13 @@ func (p *JParser) advance() {
 	}
 }
 
-/**
- * expr: term ( (PLUS | MINUS) term )*
- *
- * term : factor ( ( MUL | DIV ) factor )*
- *
- * factor: ( PLUS | MINUS ) factor
- *          power
- *
- * power: atom ( POW factor )*
- *
- * atom: INT | FLOAT
- *       LPAREN expr RPAREN
- */
+func (p *JParser) back() {
+	p.TokenIndex--
+	if p.TokenIndex >= 0 {
+		p.CurrentToken = p.Tokens[p.TokenIndex]
+	}
+}
+
 func (p *JParser) atom() (*JNode, error) {
 	currentToken := p.CurrentToken
 
@@ -72,6 +66,15 @@ func (p *JParser) atom() (*JNode, error) {
 
 		return &JNode{
 			Type:     Number,
+			Token:    currentToken,
+			StartPos: currentToken.StartPos,
+			EndPos:   currentToken.EndPos,
+		}, nil
+	case token.IDENTIFIER:
+		p.advance()
+
+		return &JNode{
+			Type:     VarAccess,
 			Token:    currentToken,
 			StartPos: currentToken.StartPos,
 			EndPos:   currentToken.EndPos,
@@ -102,7 +105,7 @@ func (p *JParser) atom() (*JNode, error) {
 				StartPos: currentToken.StartPos,
 				EndPos:   currentToken.EndPos,
 			},
-			Details: "Expected int, float, '+', '-' or '('",
+			Details: "Expected int, float, identifier, '+', '-' or '('",
 		}, "failed to parse factor")
 	}
 }
@@ -140,6 +143,44 @@ func (p *JParser) term() (*JNode, error) {
 }
 
 func (p *JParser) expr() (*JNode, error) {
+	// check if it is an assignment expression
+	if p.CurrentToken.Type == token.IDENTIFIER {
+		varToken := p.CurrentToken
+		p.advance()
+
+		if p.CurrentToken.Type == token.EQ {
+			p.advance()
+
+			expr, err := p.expr()
+			if err != nil {
+				return nil, err
+			}
+
+			return &JNode{
+				Type:     VarAssign,
+				Token:    varToken,
+				Node:     expr,
+				StartPos: varToken.StartPos,
+				EndPos:   expr.EndPos,
+			}, nil
+		} else if p.CurrentToken.Type == token.IDENTIFIER {
+			// no support consecutive identifiers
+			return nil, errors.Wrap(&common.JInvalidSyntaxError{
+				JError: &common.JError{
+					StartPos: p.CurrentToken.StartPos,
+					EndPos:   p.CurrentToken.EndPos,
+				},
+				Details: "Expected '+', '-', '*', '/' or '^'",
+			}, "failed to parse expr")
+		} else {
+			// go back when it is not an assignment expression
+			p.back()
+		}
+	} else if p.CurrentToken.Type == token.KEYWORD {
+		// TODO: check keyword
+		_ = p.CurrentToken
+	}
+
 	return p.binOp(p.term, set.NewSet(token.PLUS, token.MINUS), nil)
 }
 

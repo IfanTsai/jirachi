@@ -1,12 +1,16 @@
 package interpreter
 
 import (
+	"fmt"
+
 	"github.com/IfanTsai/jirachi/common"
 	"github.com/IfanTsai/jirachi/lexer"
 	"github.com/IfanTsai/jirachi/parser"
 	"github.com/IfanTsai/jirachi/token"
 	"github.com/pkg/errors"
 )
+
+var GlobalSymbolTable = common.NewJSymbolTable(nil).Set("null", NewJNumber(0))
 
 func Run(filename, text string) (interface{}, error) {
 	// generate tokens
@@ -22,7 +26,8 @@ func Run(filename, text string) (interface{}, error) {
 	}
 
 	// run program
-	number, err := NewJInterpreter().Visit(ast)
+	context := common.NewJContext("<program>", GlobalSymbolTable, nil, nil)
+	number, err := NewJInterpreter(context).Visit(ast)
 	if err != nil {
 		return nil, err
 	}
@@ -31,10 +36,13 @@ func Run(filename, text string) (interface{}, error) {
 }
 
 type JInterpreter struct {
+	Context *common.JContext
 }
 
-func NewJInterpreter() *JInterpreter {
-	return &JInterpreter{}
+func NewJInterpreter(context *common.JContext) *JInterpreter {
+	return &JInterpreter{
+		Context: context,
+	}
 }
 
 func (i *JInterpreter) Visit(node *parser.JNode) (*JNumber, error) {
@@ -45,6 +53,10 @@ func (i *JInterpreter) Visit(node *parser.JNode) (*JNumber, error) {
 		return i.visitBinOpNode(node)
 	case parser.UnaryOp:
 		return i.visitUnaryOpNode(node)
+	case parser.VarAssign:
+		return i.visitVarAssignNode(node)
+	case parser.VarAccess:
+		return i.visitVarAccessNode(node)
 	default:
 		return nil, errors.Wrap(&common.JInvalidSyntaxError{
 			JError: &common.JError{
@@ -57,7 +69,37 @@ func (i *JInterpreter) Visit(node *parser.JNode) (*JNumber, error) {
 }
 
 func (i *JInterpreter) visitNumberNode(node *parser.JNode) (*JNumber, error) {
-	return NewJNumber(node.Token.Value).SetPos(node.StartPos, node.EndPos), nil
+	return NewJNumber(node.Token.Value).SetJPos(node.StartPos, node.EndPos).SetJContext(i.Context), nil
+}
+
+func (i *JInterpreter) visitVarAssignNode(node *parser.JNode) (*JNumber, error) {
+	varName := node.Token.Value
+
+	value, err := i.Visit(node.Node)
+	if err != nil {
+		return nil, err
+	}
+
+	i.Context.SymbolTable.Set(varName, value)
+
+	return value, nil
+}
+
+func (i *JInterpreter) visitVarAccessNode(node *parser.JNode) (*JNumber, error) {
+	varName := node.Token.Value
+	value := i.Context.SymbolTable.Get(varName)
+	if value == nil {
+		return nil, errors.Wrap(&common.JRunTimeError{
+			JError: &common.JError{
+				StartPos: node.StartPos,
+				EndPos:   node.EndPos,
+			},
+			Context: i.Context,
+			Details: fmt.Sprintf("'%v' is not defined", varName),
+		}, "failed to access variable")
+	}
+
+	return NewJNumber(value.(*JNumber).Value).SetJPos(node.StartPos, node.EndPos).SetJContext(i.Context), nil
 }
 
 func (i *JInterpreter) visitBinOpNode(node *parser.JNode) (*JNumber, error) {
@@ -98,7 +140,7 @@ func (i *JInterpreter) visitBinOpNode(node *parser.JNode) (*JNumber, error) {
 		return nil, err
 	}
 
-	return resNumber.SetPos(node.StartPos, node.EndPos), nil
+	return resNumber.SetJPos(node.StartPos, node.EndPos), nil
 }
 
 func (i *JInterpreter) visitUnaryOpNode(node *parser.JNode) (*JNumber, error) {
@@ -113,5 +155,5 @@ func (i *JInterpreter) visitUnaryOpNode(node *parser.JNode) (*JNumber, error) {
 		}
 	}
 
-	return number.SetPos(node.StartPos, node.EndPos), nil
+	return number.SetJPos(node.StartPos, node.EndPos), nil
 }

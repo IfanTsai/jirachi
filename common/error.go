@@ -38,11 +38,26 @@ func (e *JInvalidSyntaxError) Error() string {
 
 type JRunTimeError struct {
 	*JError
+	Context *JContext
 	Details string
 }
 
 func (e *JRunTimeError) Error() string {
-	return e.ErrorString("Runtime Error", e.Details)
+	return e.generateTraceBack() + e.ErrorString("Runtime Error", e.Details)
+}
+
+func (e *JRunTimeError) generateTraceBack() string {
+	pos := e.StartPos
+	context := e.Context
+	result := ""
+
+	for context != nil {
+		result = fmt.Sprintf("  File %s, line %d, in %s\n", pos.Filename, pos.Ln+1, context.Name) + result
+		pos = context.ParentEntryPos
+		context = context.Parent
+	}
+
+	return "Traceback (most recent call last):\n" + result
 }
 
 type JNumberTypeError struct {
