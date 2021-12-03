@@ -66,7 +66,7 @@ func TestJInterpreter_Visit(t *testing.T) {
 			},
 		},
 		{
-			name: "OK4",
+			name: "OK5",
 			text: "a + 3",
 			preRun: func(t *testing.T) {
 				t.Helper()
@@ -94,6 +94,36 @@ func TestJInterpreter_Visit(t *testing.T) {
 				require.IsType(t, &interpreter.JNumber{}, varNumber)
 				require.IsType(t, 0, varNumber.(*interpreter.JNumber).Value)
 				require.Equal(t, 5, varNumber.(*interpreter.JNumber).Value)
+			},
+		},
+		{
+			name: "OK6",
+			text: "5 - 5 OR 1 + 2 AND (NOT 0 AND 10) - 2 * 5",
+			checkResult: func(t *testing.T, number *interpreter.JNumber, err error) {
+				t.Helper()
+				require.NoError(t, err)
+				require.IsType(t, 0, number.Value)
+				require.Equal(t, 1, number.Value.(int))
+			},
+		},
+		{
+			name: "OK7",
+			text: "5 - 5 OR 1 + 2 AND NOT 0 AND 10 - 2 * 5",
+			checkResult: func(t *testing.T, number *interpreter.JNumber, err error) {
+				t.Helper()
+				require.NoError(t, err)
+				require.IsType(t, 0, number.Value)
+				require.Equal(t, 0, number.Value.(int))
+			},
+		},
+		{
+			name: "OK8",
+			text: " (3 > 2) OR 1 + 2 AND NOT 0 AND 10 - 2 * 5 AND (5 - 5 == 0)",
+			checkResult: func(t *testing.T, number *interpreter.JNumber, err error) {
+				t.Helper()
+				require.NoError(t, err)
+				require.IsType(t, 0, number.Value)
+				require.Equal(t, 0, number.Value.(int))
 			},
 		},
 		{

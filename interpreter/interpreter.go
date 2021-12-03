@@ -10,7 +10,10 @@ import (
 	"github.com/pkg/errors"
 )
 
-var GlobalSymbolTable = common.NewJSymbolTable(nil).Set("null", NewJNumber(0))
+var GlobalSymbolTable = common.NewJSymbolTable(nil).
+	Set("NULL", NewJNumber(0)).
+	Set("TRUE", NewJNumber(1)).
+	Set("FALSE", NewJNumber(0))
 
 func Run(filename, text string) (interface{}, error) {
 	// generate tokens
@@ -126,6 +129,25 @@ func (i *JInterpreter) visitBinOpNode(node *parser.JNode) (*JNumber, error) {
 		resNumber, err = leftNumber.DivBy(rightNUmber)
 	case token.POW:
 		resNumber, err = leftNumber.PowBy(rightNUmber)
+	case token.EE:
+		resNumber, err = leftNumber.EqualTo(rightNUmber)
+	case token.NE:
+		resNumber, err = leftNumber.NotEqualTo(rightNUmber)
+	case token.LT:
+		resNumber, err = leftNumber.LessThen(rightNUmber)
+	case token.LTE:
+		resNumber, err = leftNumber.LessThenOrEqualTo(rightNUmber)
+	case token.GT:
+		resNumber, err = leftNumber.GreaterThen(rightNUmber)
+	case token.GTE:
+		resNumber, err = leftNumber.GreaterThenOrEqualTo(rightNUmber)
+	case token.KEYWORD:
+		switch node.Token.Value {
+		case token.AND:
+			resNumber, err = leftNumber.AndBy(rightNUmber)
+		case token.OR:
+			resNumber, err = leftNumber.OrBy(rightNUmber)
+		}
 	default:
 		return nil, errors.Wrap(&common.JInvalidSyntaxError{
 			JError: &common.JError{
@@ -148,11 +170,15 @@ func (i *JInterpreter) visitUnaryOpNode(node *parser.JNode) (*JNumber, error) {
 	if err != nil {
 		return nil, err
 	}
-	if node.Token.Type == token.MINUS {
+	switch {
+	case node.Token.Type == token.MINUS:
 		number, err = number.MulBy(NewJNumber(-1))
-		if err != nil {
-			return nil, err
-		}
+	case node.Token.Match(token.KEYWORD, token.NOT):
+		number, err = number.Not()
+	}
+
+	if err != nil {
+		return nil, err
 	}
 
 	return number.SetJPos(node.StartPos, node.EndPos), nil

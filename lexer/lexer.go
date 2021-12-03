@@ -26,23 +26,23 @@ func NewJLexer(filename, text string) *JLexer {
 func (l *JLexer) MakeTokens() ([]*token.JToken, error) {
 	tokens := make([]*token.JToken, 0, len(l.Text))
 
+	var err error
+	var tok *token.JToken
+
 	for advanceAble := l.advance(); advanceAble; {
-		char := l.Text[l.Pos.Index]
+		char := l.getCurrentChar()
 		switch {
 		case char == ' ' || char == '\t':
 			advanceAble = l.advance()
 		case isDigit(char):
-			var numberToken *token.JToken
-			var err error
-			numberToken, advanceAble, err = l.makeNumberToken()
+			tok, advanceAble, err = l.makeNumberToken()
 			if err != nil {
 				return nil, err
 			}
-			tokens = append(tokens, numberToken)
+			tokens = append(tokens, tok)
 		case isLetters(char):
-			var numberToken *token.JToken
-			numberToken, advanceAble = l.makeIdentifierToken()
-			tokens = append(tokens, numberToken)
+			tok, advanceAble = l.makeIdentifierToken()
+			tokens = append(tokens, tok)
 		case char == '+':
 			tokens = append(tokens, token.NewJToken(token.PLUS, nil, l.Pos, l.Pos))
 			advanceAble = l.advance()
@@ -59,14 +59,26 @@ func (l *JLexer) MakeTokens() ([]*token.JToken, error) {
 			tokens = append(tokens, token.NewJToken(token.POW, nil, l.Pos, l.Pos))
 			advanceAble = l.advance()
 		case char == '=':
-			tokens = append(tokens, token.NewJToken(token.EQ, nil, l.Pos, l.Pos))
-			advanceAble = l.advance()
+			tok, advanceAble = l.makeEqualToken()
+			tokens = append(tokens, tok)
 		case char == '(':
 			tokens = append(tokens, token.NewJToken(token.LPAREN, nil, l.Pos, l.Pos))
 			advanceAble = l.advance()
 		case char == ')':
 			tokens = append(tokens, token.NewJToken(token.RPAREN, nil, l.Pos, l.Pos))
 			advanceAble = l.advance()
+		case char == '!':
+			tok, advanceAble, err = l.makeNotEqualToken()
+			if err != nil {
+				return nil, err
+			}
+			tokens = append(tokens, tok)
+		case char == '<':
+			tok, advanceAble = l.makeLessThanToken()
+			tokens = append(tokens, tok)
+		case char == '>':
+			tok, advanceAble = l.makeGreaterThanToken()
+			tokens = append(tokens, tok)
 		default:
 			startPos := l.Pos.Copy()
 			l.advance()
@@ -93,7 +105,7 @@ func (l *JLexer) makeNumberToken() (*token.JToken, bool, error) {
 	var numStrBuilder strings.Builder
 
 	for {
-		char := l.Text[l.Pos.Index]
+		char := l.getCurrentChar()
 
 		if char != '.' && !isDigit(char) {
 			break
@@ -138,7 +150,7 @@ func (l *JLexer) makeIdentifierToken() (*token.JToken, bool) {
 	var identifierStrBuilder strings.Builder
 
 	for {
-		char := l.Text[l.Pos.Index]
+		char := l.getCurrentChar()
 
 		if !isLetters(char) && !isDigit(char) {
 			break
@@ -161,6 +173,67 @@ func (l *JLexer) makeIdentifierToken() (*token.JToken, bool) {
 	return token.NewJToken(token.IDENTIFIER, identifier, startPos, l.Pos), advanceAble
 }
 
+func (l *JLexer) makeNotEqualToken() (*token.JToken, bool, error) {
+	startPos := l.Pos.Copy()
+	advanceAble := l.advance()
+
+	if l.getCurrentChar() == '=' {
+		advanceAble = l.advance()
+
+		return token.NewJToken(token.NE, nil, startPos, l.Pos), advanceAble, nil
+	}
+
+	return nil, advanceAble, errors.Wrap(&common.JExpectedCharacterError{
+		JError: &common.JError{
+			StartPos: startPos,
+			EndPos:   l.Pos,
+		},
+		ExpectedChar: '=',
+	}, "failed to make not equal token")
+}
+
+func (l *JLexer) makeEqualToken() (*token.JToken, bool) {
+	startPos := l.Pos.Copy()
+	advanceAble := l.advance()
+	tokenType := token.EQ
+
+	if l.getCurrentChar() == '=' {
+		advanceAble = l.advance()
+
+		tokenType = token.EE
+	}
+
+	return token.NewJToken(tokenType, nil, startPos, l.Pos), advanceAble
+}
+
+func (l *JLexer) makeLessThanToken() (*token.JToken, bool) {
+	startPos := l.Pos.Copy()
+	advanceAble := l.advance()
+	tokenType := token.LT
+
+	if l.getCurrentChar() == '=' {
+		advanceAble = l.advance()
+
+		tokenType = token.LTE
+	}
+
+	return token.NewJToken(tokenType, nil, startPos, l.Pos), advanceAble
+}
+
+func (l *JLexer) makeGreaterThanToken() (*token.JToken, bool) {
+	startPos := l.Pos.Copy()
+	advanceAble := l.advance()
+	tokenType := token.GT
+
+	if l.getCurrentChar() == '=' {
+		advanceAble = l.advance()
+
+		tokenType = token.GTE
+	}
+
+	return token.NewJToken(tokenType, nil, startPos, l.Pos), advanceAble
+}
+
 func (l *JLexer) advance() bool {
 	if l.Pos.Index+1 >= len(l.Text) {
 		l.Pos.Advance(l.Text)
@@ -171,6 +244,10 @@ func (l *JLexer) advance() bool {
 	l.Pos.Advance(l.Text)
 
 	return true
+}
+
+func (l *JLexer) getCurrentChar() byte {
+	return l.Text[l.Pos.Index]
 }
 
 func isDigit(char byte) bool {

@@ -46,29 +46,29 @@ func TestJParser_Parse(t *testing.T) {
 			},
 		},
 		{
-			name: "Invalid Syntax: Expected '+', '-', '*' or '/'",
+			name: "Invalid Syntax1",
 			text: "1 + ",
 			checkResult: func(t *testing.T, node *parser.JNode, err error) {
 				t.Helper()
 				require.Error(t, err)
 				require.IsType(t, &common.JInvalidSyntaxError{}, errors.Cause(err))
-				require.Contains(t, err.Error(), "Invalid Syntax: Expected int, float, identifier, '+', '-' or '('")
+				require.Contains(t, err.Error(), "Invalid Syntax: Expected int, float, identifier, '+', '-', '(' or 'NOT'")
 				require.Nil(t, node)
 			},
 		},
 		{
-			name: "Invalid Syntax, End of token",
+			name: "Invalid Syntax2",
 			text: "1 + *2",
 			checkResult: func(t *testing.T, node *parser.JNode, err error) {
 				t.Helper()
 				require.Error(t, err)
 				require.IsType(t, &common.JInvalidSyntaxError{}, errors.Cause(err))
-				require.Contains(t, err.Error(), "Invalid Syntax: Expected int, float, identifier, '+', '-' or '('")
+				require.Contains(t, err.Error(), "Invalid Syntax: Expected int, float, identifier, '+', '-', '(' or 'NOT'")
 				require.Nil(t, node)
 			},
 		},
 		{
-			name: "Invalid Syntax: Expected ')'",
+			name: "Invalid Syntax3",
 			text: "1 * (-2 * (3 / (2 * 5))",
 			checkResult: func(t *testing.T, node *parser.JNode, err error) {
 				t.Helper()
@@ -79,8 +79,19 @@ func TestJParser_Parse(t *testing.T) {
 			},
 		},
 		{
-			name: "Invalid Syntax: Expected int, float, identifier, identifier, '+', '-' or '('",
+			name: "Invalid Syntax4",
 			text: "1 + a = 2",
+			checkResult: func(t *testing.T, node *parser.JNode, err error) {
+				t.Helper()
+				require.Error(t, err)
+				require.IsType(t, &common.JInvalidSyntaxError{}, errors.Cause(err))
+				require.Contains(t, err.Error(), "Invalid Syntax: Expected '+', '-', '*', '/' or '^'")
+				require.Nil(t, node)
+			},
+		},
+		{
+			name: "Invalid Syntax5",
+			text: "(5 - 5) OR (1 + 2) AND NOT 0 NOT 1",
 			checkResult: func(t *testing.T, node *parser.JNode, err error) {
 				t.Helper()
 				require.Error(t, err)
