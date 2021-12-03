@@ -66,12 +66,12 @@ func TestJInterpreter_Visit(t *testing.T) {
 			},
 		},
 		{
-			name: "OK4",
-			text: "a + 3",
+			name: "OK5",
+			text: "b + 3",
 			preRun: func(t *testing.T) {
 				t.Helper()
 
-				tokens, err := lexer.NewJLexer("stdin", "a = 5").MakeTokens()
+				tokens, err := lexer.NewJLexer("stdin", "b = 5").MakeTokens()
 				require.NoError(t, err)
 				require.NotEmpty(t, tokens)
 
@@ -90,10 +90,40 @@ func TestJInterpreter_Visit(t *testing.T) {
 				require.IsType(t, 0, number.Value)
 				require.Equal(t, 8, number.Value.(int))
 
-				varNumber := interpreter.GlobalSymbolTable.Get("a")
+				varNumber := interpreter.GlobalSymbolTable.Get("b")
 				require.IsType(t, &interpreter.JNumber{}, varNumber)
 				require.IsType(t, 0, varNumber.(*interpreter.JNumber).Value)
 				require.Equal(t, 5, varNumber.(*interpreter.JNumber).Value)
+			},
+		},
+		{
+			name: "OK6",
+			text: "5 - 5 OR 1 + 2 AND (NOT 0 AND 10) - 2 * 5",
+			checkResult: func(t *testing.T, number *interpreter.JNumber, err error) {
+				t.Helper()
+				require.NoError(t, err)
+				require.IsType(t, 0, number.Value)
+				require.Equal(t, 1, number.Value.(int))
+			},
+		},
+		{
+			name: "OK7",
+			text: "5 - 5 OR 1 + 2 AND NOT 0 AND 10 - 2 * 5",
+			checkResult: func(t *testing.T, number *interpreter.JNumber, err error) {
+				t.Helper()
+				require.NoError(t, err)
+				require.IsType(t, 0, number.Value)
+				require.Equal(t, 0, number.Value.(int))
+			},
+		},
+		{
+			name: "OK8",
+			text: " (3 > 2) OR 1 + 2 AND NOT 0 AND 10 - 2 * 5 AND (5 - 5 == 0)",
+			checkResult: func(t *testing.T, number *interpreter.JNumber, err error) {
+				t.Helper()
+				require.NoError(t, err)
+				require.IsType(t, 0, number.Value)
+				require.Equal(t, 0, number.Value.(int))
 			},
 		},
 		{
@@ -131,11 +161,11 @@ func TestJInterpreter_Visit(t *testing.T) {
 		},
 		{
 			name: "Division by zero variable",
-			text: "13 / (a - 2)",
+			text: "13 / (c - 2)",
 			preRun: func(t *testing.T) {
 				t.Helper()
 
-				tokens, err := lexer.NewJLexer("stdin", "a = 2").MakeTokens()
+				tokens, err := lexer.NewJLexer("stdin", "c = 2").MakeTokens()
 				require.NoError(t, err)
 				require.NotEmpty(t, tokens)
 

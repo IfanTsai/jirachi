@@ -201,3 +201,241 @@ func (n *JNumber) PowBy(other *JNumber) (*JNumber, error) {
 
 	return resNumber.SetJContext(n.Context), nil
 }
+
+func (n *JNumber) EqualTo(other *JNumber) (*JNumber, error) {
+	var res bool
+
+	switch otherValue := other.Value.(type) {
+	case int:
+		if num, ok := n.Value.(int); ok {
+			res = num == otherValue
+		} else {
+			res = int(n.Value.(float64)) == otherValue
+		}
+	case float64:
+		if num, ok := n.Value.(int); ok {
+			res = float64(num) == otherValue
+		} else {
+			res = n.Value.(float64) == otherValue
+		}
+	default:
+		return nil, errors.Wrap(&common.JNumberTypeError{
+			JError: &common.JError{
+				StartPos: other.StartPos,
+				EndPos:   other.EndPos,
+			},
+			Number: nil,
+		}, "failed to compare equal")
+	}
+
+	return NewJNumber(boolToNumber(res)).SetJContext(n.Context), nil
+}
+
+func (n *JNumber) NotEqualTo(other *JNumber) (*JNumber, error) {
+	var res bool
+
+	switch otherValue := other.Value.(type) {
+	case int:
+		if num, ok := n.Value.(int); ok {
+			res = num != otherValue
+		} else {
+			res = int(n.Value.(float64)) != otherValue
+		}
+	case float64:
+		if num, ok := n.Value.(int); ok {
+			res = float64(num) != otherValue
+		} else {
+			res = n.Value.(float64) != otherValue
+		}
+	default:
+		return nil, errors.Wrap(&common.JNumberTypeError{
+			JError: &common.JError{
+				StartPos: other.StartPos,
+				EndPos:   other.EndPos,
+			},
+			Number: nil,
+		}, "failed to compare not equal")
+	}
+
+	return NewJNumber(boolToNumber(res)).SetJContext(n.Context), nil
+}
+
+func (n *JNumber) LessThen(other *JNumber) (*JNumber, error) {
+	var res bool
+
+	switch otherValue := other.Value.(type) {
+	case int:
+		if num, ok := n.Value.(int); ok {
+			res = num < otherValue
+		} else {
+			res = int(n.Value.(float64)) < otherValue
+		}
+	case float64:
+		if num, ok := n.Value.(int); ok {
+			res = float64(num) < otherValue
+		} else {
+			res = n.Value.(float64) < otherValue
+		}
+	default:
+		return nil, errors.Wrap(&common.JNumberTypeError{
+			JError: &common.JError{
+				StartPos: other.StartPos,
+				EndPos:   other.EndPos,
+			},
+			Number: nil,
+		}, "failed to compare less then")
+	}
+
+	return NewJNumber(boolToNumber(res)).SetJContext(n.Context), nil
+}
+
+func (n *JNumber) LessThenOrEqualTo(other *JNumber) (*JNumber, error) {
+	var res bool
+
+	switch otherValue := other.Value.(type) {
+	case int:
+		if num, ok := n.Value.(int); ok {
+			res = num <= otherValue
+		} else {
+			res = int(n.Value.(float64)) <= otherValue
+		}
+	case float64:
+		if num, ok := n.Value.(int); ok {
+			res = float64(num) <= otherValue
+		} else {
+			res = n.Value.(float64) <= otherValue
+		}
+	default:
+		return nil, errors.Wrap(&common.JNumberTypeError{
+			JError: &common.JError{
+				StartPos: other.StartPos,
+				EndPos:   other.EndPos,
+			},
+			Number: nil,
+		}, "failed to compare less then or equal")
+	}
+
+	return NewJNumber(boolToNumber(res)).SetJContext(n.Context), nil
+}
+
+func (n *JNumber) GreaterThen(other *JNumber) (*JNumber, error) {
+	var res bool
+
+	switch otherValue := other.Value.(type) {
+	case int:
+		if num, ok := n.Value.(int); ok {
+			res = num > otherValue
+		} else {
+			res = int(n.Value.(float64)) > otherValue
+		}
+	case float64:
+		if num, ok := n.Value.(int); ok {
+			res = float64(num) > otherValue
+		} else {
+			res = n.Value.(float64) > otherValue
+		}
+	default:
+		return nil, errors.Wrap(&common.JNumberTypeError{
+			JError: &common.JError{
+				StartPos: other.StartPos,
+				EndPos:   other.EndPos,
+			},
+			Number: nil,
+		}, "failed to compare greater then")
+	}
+
+	return NewJNumber(boolToNumber(res)).SetJContext(n.Context), nil
+}
+
+func (n *JNumber) GreaterThenOrEqualTo(other *JNumber) (*JNumber, error) {
+	var res bool
+
+	switch otherValue := other.Value.(type) {
+	case int:
+		if num, ok := n.Value.(int); ok {
+			res = num >= otherValue
+		} else {
+			res = int(n.Value.(float64)) >= otherValue
+		}
+	case float64:
+		if num, ok := n.Value.(int); ok {
+			res = float64(num) >= otherValue
+		} else {
+			res = n.Value.(float64) >= otherValue
+		}
+	default:
+		return nil, errors.Wrap(&common.JNumberTypeError{
+			JError: &common.JError{
+				StartPos: other.StartPos,
+				EndPos:   other.EndPos,
+			},
+			Number: nil,
+		}, "failed to compare greater then or equal")
+	}
+
+	return NewJNumber(boolToNumber(res)).SetJContext(n.Context), nil
+}
+
+func (n *JNumber) AndBy(other *JNumber) (*JNumber, error) {
+	if !isNumber(other.Value) {
+		return nil, errors.Wrap(&common.JNumberTypeError{
+			JError: &common.JError{
+				StartPos: other.StartPos,
+				EndPos:   other.EndPos,
+			},
+			Number: nil,
+		}, "failed to perform and logic operation")
+	}
+
+	res := numberToBool(n.Value) && numberToBool(other.Value)
+
+	return NewJNumber(boolToNumber(res)).SetJContext(n.Context), nil
+}
+
+func (n *JNumber) OrBy(other *JNumber) (*JNumber, error) {
+	if !isNumber(other.Value) {
+		return nil, errors.Wrap(&common.JNumberTypeError{
+			JError: &common.JError{
+				StartPos: other.StartPos,
+				EndPos:   other.EndPos,
+			},
+			Number: nil,
+		}, "failed to perform or logic operation")
+	}
+
+	res := numberToBool(n.Value) || numberToBool(other.Value)
+
+	return NewJNumber(boolToNumber(res)).SetJContext(n.Context), nil
+}
+
+func (n *JNumber) Not() (*JNumber, error) {
+	res := !numberToBool(n.Value)
+
+	return NewJNumber(boolToNumber(res)).SetJContext(n.Context), nil
+}
+
+func boolToNumber(b bool) interface{} {
+	if b {
+		return 1
+	}
+
+	return 0
+}
+
+func numberToBool(n interface{}) bool {
+	if value, ok := n.(int); ok {
+		return value != 0
+	}
+
+	return n.(float64) != 0
+}
+
+func isNumber(n interface{}) bool {
+	if _, ok := n.(int); ok {
+		return true
+	} else if _, ok := n.(float64); ok {
+		return true
+	}
+
+	return false
+}

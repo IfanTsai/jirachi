@@ -16,21 +16,33 @@ const (
 	FLOAT      JTokenType = "FLOAT"
 	IDENTIFIER JTokenType = "IDENTIFIER"
 	KEYWORD    JTokenType = "KEYWORD"
-	PLUS       JTokenType = "PLUS"
-	MINUS      JTokenType = "MINUS"
-	MUL        JTokenType = "MUL"
-	DIV        JTokenType = "DIV"
-	POW        JTokenType = "POW"
-	EQ         JTokenType = "EQ"
-	LPAREN     JTokenType = "LPAREN"
-	RPAREN     JTokenType = "RPAREN"
+	PLUS       JTokenType = "PLUS"   // +
+	MINUS      JTokenType = "MINUS"  // -
+	MUL        JTokenType = "MUL"    // *
+	DIV        JTokenType = "DIV"    // /
+	POW        JTokenType = "POW"    // ^
+	EQ         JTokenType = "EQ"     // =
+	LPAREN     JTokenType = "LPAREN" // (
+	RPAREN     JTokenType = "RPAREN" // )
+	EE         JTokenType = "EE"     // ==
+	NE         JTokenType = "NE"     // !=
+	LT         JTokenType = "LT"     // <
+	GT         JTokenType = "GT"     // >
+	LTE        JTokenType = "LTE"    // <=
+	GTE        JTokenType = "GTE"    // >=
 	EOF        JTokenType = "EOF"
 )
 
+const (
+	AND = "AND"
+	OR  = "OR"
+	NOT = "NOT"
+)
+
 var KEYWORDS = set.NewSet(
-	"IF",
-	"ELIF",
-	"ELSE",
+	AND,
+	OR,
+	NOT,
 )
 
 type JToken struct {

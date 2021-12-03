@@ -27,6 +27,15 @@ func (e *JIllegalCharacterError) Error() string {
 	return e.ErrorString("Illegal Character", "'"+string(e.IllegalChar)+"'")
 }
 
+type JExpectedCharacterError struct {
+	*JError
+	ExpectedChar byte
+}
+
+func (e *JExpectedCharacterError) Error() string {
+	return e.ErrorString("Expected Character", "'"+string(e.ExpectedChar)+"'")
+}
+
 type JInvalidSyntaxError struct {
 	*JError
 	Details string

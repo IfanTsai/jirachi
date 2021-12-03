@@ -30,6 +30,10 @@ func Run() {
 			break
 		}
 
+		if len(line) == 0 {
+			continue
+		}
+
 		ast, err := interpreter.Run("stdin", line)
 		if err != nil {
 			fmt.Printf("%+v\n", err)
