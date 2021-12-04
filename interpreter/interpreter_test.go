@@ -103,7 +103,7 @@ func TestJInterpreter_Visit(t *testing.T) {
 				t.Helper()
 				require.NoError(t, err)
 				require.IsType(t, 0, number.Value)
-				require.Equal(t, 1, number.Value.(int))
+				require.Equal(t, 0, number.Value.(int))
 			},
 		},
 		{
