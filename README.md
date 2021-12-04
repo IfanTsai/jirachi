@@ -1,5 +1,7 @@
 ## jirachi
 
+<img align="right" alt="jirachi" src="https://img.caiyifan.cn/typora_picgo/082d867d46be18bd42eae2b3b05c1e35.jpg" width="auto" height="auto" />
+
 interpreter for the basic language written in golang
 
 The plan supports the following functions:
@@ -25,4 +27,4 @@ The plan supports the following functions:
 
 Example:
 
-<img src="https://img.caiyifan.cn/typora_picgo/image-20211204004431541.png" alt="image-20211204004431541" style="zoom:80%;" /> 
+<img src="https://img.caiyifan.cn/typora_picgo/image-20211204175744657.png" alt="image-20211204175744657" style="zoom:80%;" /> 

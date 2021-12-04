@@ -377,35 +377,21 @@ func (n *JNumber) GreaterThenOrEqualTo(other *JNumber) (*JNumber, error) {
 }
 
 func (n *JNumber) AndBy(other *JNumber) (*JNumber, error) {
-	if !isNumber(other.Value) {
-		return nil, errors.Wrap(&common.JNumberTypeError{
-			JError: &common.JError{
-				StartPos: other.StartPos,
-				EndPos:   other.EndPos,
-			},
-			Number: nil,
-		}, "failed to perform and logic operation")
+	// short-circuit evaluation
+	if numberToBool(n.Value) {
+		return NewJNumber(other.Value).SetJContext(n.Context), nil
+	} else {
+		return NewJNumber(n.Value).SetJContext(n.Context), nil
 	}
-
-	res := numberToBool(n.Value) && numberToBool(other.Value)
-
-	return NewJNumber(boolToNumber(res)).SetJContext(n.Context), nil
 }
 
 func (n *JNumber) OrBy(other *JNumber) (*JNumber, error) {
-	if !isNumber(other.Value) {
-		return nil, errors.Wrap(&common.JNumberTypeError{
-			JError: &common.JError{
-				StartPos: other.StartPos,
-				EndPos:   other.EndPos,
-			},
-			Number: nil,
-		}, "failed to perform or logic operation")
+	// short-circuit evaluation
+	if numberToBool(n.Value) {
+		return NewJNumber(n.Value).SetJContext(n.Context), nil
+	} else {
+		return NewJNumber(other.Value).SetJContext(n.Context), nil
 	}
-
-	res := numberToBool(n.Value) || numberToBool(other.Value)
-
-	return NewJNumber(boolToNumber(res)).SetJContext(n.Context), nil
 }
 
 func (n *JNumber) Not() (*JNumber, error) {
@@ -428,14 +414,4 @@ func numberToBool(n interface{}) bool {
 	}
 
 	return n.(float64) != 0
-}
-
-func isNumber(n interface{}) bool {
-	if _, ok := n.(int); ok {
-		return true
-	} else if _, ok := n.(float64); ok {
-		return true
-	}
-
-	return false
 }
