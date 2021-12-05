@@ -13,15 +13,18 @@ const (
 	VarAccess
 	BinOp
 	UnaryOp
+	IfExpr
 )
 
 // JNode is general node structure of AST
 type JNode struct {
 	Type      JNodeType
 	Token     *token.JToken
-	LeftNode  *JNode // for BinOp
-	RightNode *JNode // for BinOp
-	Node      *JNode // for UnaryOp, VarAssign
+	LeftNode  *JNode      // for BinOp
+	RightNode *JNode      // for BinOp
+	Node      *JNode      // for UnaryOp, VarAssign, VarAccess
+	Cases     [][2]*JNode // for IfExpr
+	ElseCase  *JNode      // for IfExpr
 	StartPos  *common.JPosition
 	EndPos    *common.JPosition
 }

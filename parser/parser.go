@@ -57,6 +57,58 @@ func (p *JParser) back() {
 	}
 }
 
+func (p *JParser) ifExpr() (*JNode, error) {
+	if !p.CurrentToken.Match(token.KEYWORD, token.IF) {
+		return nil, errors.Wrap(&common.JInvalidSyntaxError{
+			JError: &common.JError{
+				StartPos: p.CurrentToken.StartPos,
+				EndPos:   p.CurrentToken.EndPos,
+			},
+			Details: "Expected 'IF'",
+		}, "failed to parse if expression")
+	}
+
+	var elseCase *JNode
+	cases := make([][2]*JNode, 0, 3)
+
+	cases, err := p.parseThenExpr(cases)
+	if err != nil {
+		return nil, err
+	}
+
+	for p.CurrentToken.Match(token.KEYWORD, token.ELIF) {
+		cases, err = p.parseThenExpr(cases)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	if p.CurrentToken.Match(token.KEYWORD, token.ELSE) {
+		p.advance()
+
+		elseCase, err = p.expr()
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	var endPos *common.JPosition
+	if elseCase != nil {
+		endPos = elseCase.EndPos
+	} else {
+		endPos = cases[len(cases)-1][0].EndPos
+	}
+
+	return &JNode{
+		Type:     IfExpr,
+		Cases:    cases,
+		ElseCase: elseCase,
+		StartPos: cases[0][0].StartPos,
+		EndPos:   endPos,
+	}, nil
+
+}
+
 func (p *JParser) atom() (*JNode, error) {
 	currentToken := p.CurrentToken
 
@@ -99,15 +151,20 @@ func (p *JParser) atom() (*JNode, error) {
 		p.advance()
 
 		return expr, nil
-	default:
-		return nil, errors.Wrap(&common.JInvalidSyntaxError{
-			JError: &common.JError{
-				StartPos: currentToken.StartPos,
-				EndPos:   currentToken.EndPos,
-			},
-			Details: "Expected int, float, identifier, '+', '-', '(' or 'NOT'",
-		}, "failed to parse factor")
+	case token.KEYWORD:
+		switch currentToken.Value {
+		case token.IF:
+			return p.ifExpr()
+		}
 	}
+
+	return nil, errors.Wrap(&common.JInvalidSyntaxError{
+		JError: &common.JError{
+			StartPos: currentToken.StartPos,
+			EndPos:   currentToken.EndPos,
+		},
+		Details: "Expected int, float, identifier, '+', '-', '(' or 'NOT'",
+	}, "failed to parse factor")
 }
 
 func (p *JParser) power() (*JNode, error) {
@@ -239,4 +296,34 @@ func (p *JParser) binOp(getNodeFuncA getNodeFunc, ops *set.Set, getNodeFuncB get
 	}
 
 	return leftNode, nil
+}
+
+func (p *JParser) parseThenExpr(cases [][2]*JNode) ([][2]*JNode, error) {
+	p.advance()
+
+	condition, err := p.expr()
+	if err != nil {
+		return nil, err
+	}
+
+	if !p.CurrentToken.Match(token.KEYWORD, token.THEN) {
+		return nil, errors.Wrap(&common.JInvalidSyntaxError{
+			JError: &common.JError{
+				StartPos: p.CurrentToken.StartPos,
+				EndPos:   p.CurrentToken.EndPos,
+			},
+			Details: "Expected 'THEN'",
+		}, "failed to parse if expression")
+	}
+
+	p.advance()
+
+	expr, err := p.expr()
+	if err != nil {
+		return nil, err
+	}
+
+	cases = append(cases, [2]*JNode{condition, expr})
+
+	return cases, nil
 }
