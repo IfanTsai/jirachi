@@ -7,7 +7,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-type getNodeFunc func() (*JNode, error)
+type getNodeFunc func() (JNode, error)
 
 type JParser struct {
 	TokenIndex   int
@@ -22,7 +22,7 @@ func NewJParser(tokens []*token.JToken, tokenIndex int) *JParser {
 	}
 }
 
-func (p *JParser) Parse() (*JNode, error) {
+func (p *JParser) Parse() (JNode, error) {
 	p.advance()
 
 	ast, err := p.expr()
@@ -57,7 +57,7 @@ func (p *JParser) back() {
 	}
 }
 
-func (p *JParser) ifExpr() (*JNode, error) {
+func (p *JParser) ifExpr() (JNode, error) {
 	if !p.CurrentToken.Match(token.KEYWORD, token.IF) {
 		return nil, errors.Wrap(&common.JInvalidSyntaxError{
 			JError: &common.JError{
@@ -68,8 +68,8 @@ func (p *JParser) ifExpr() (*JNode, error) {
 		}, "failed to parse if expression")
 	}
 
-	var elseCase *JNode
-	cases := make([][2]*JNode, 0, 3)
+	var elseCase JNode
+	cases := make([][2]JNode, 0, 3)
 
 	cases, err := p.parseThenExpr(cases)
 	if err != nil {
@@ -94,42 +94,44 @@ func (p *JParser) ifExpr() (*JNode, error) {
 
 	var endPos *common.JPosition
 	if elseCase != nil {
-		endPos = elseCase.EndPos
+		endPos = elseCase.GetEndPos()
 	} else {
-		endPos = cases[len(cases)-1][0].EndPos
+		endPos = cases[len(cases)-1][0].GetEndPos()
 	}
 
-	return &JNode{
-		Type:     IfExpr,
+	return &JIfExprNode{
+		JBaseNode: &JBaseNode{
+			StartPos: cases[0][0].GetStartPos(),
+			EndPos:   endPos,
+		},
 		Cases:    cases,
 		ElseCase: elseCase,
-		StartPos: cases[0][0].StartPos,
-		EndPos:   endPos,
 	}, nil
-
 }
 
-func (p *JParser) atom() (*JNode, error) {
+func (p *JParser) atom() (JNode, error) {
 	currentToken := p.CurrentToken
 
 	switch currentToken.Type {
 	case token.INT, token.FLOAT:
 		p.advance()
 
-		return &JNode{
-			Type:     Number,
-			Token:    currentToken,
-			StartPos: currentToken.StartPos,
-			EndPos:   currentToken.EndPos,
+		return &JNumberNode{
+			JBaseNode: &JBaseNode{
+				Token:    currentToken,
+				StartPos: currentToken.StartPos,
+				EndPos:   currentToken.EndPos,
+			},
 		}, nil
 	case token.IDENTIFIER:
 		p.advance()
 
-		return &JNode{
-			Type:     VarAccess,
-			Token:    currentToken,
-			StartPos: currentToken.StartPos,
-			EndPos:   currentToken.EndPos,
+		return &JVarAccessNode{
+			JBaseNode: &JBaseNode{
+				Token:    currentToken,
+				StartPos: currentToken.StartPos,
+				EndPos:   currentToken.EndPos,
+			},
 		}, nil
 	case token.LPAREN:
 		p.advance()
@@ -167,11 +169,11 @@ func (p *JParser) atom() (*JNode, error) {
 	}, "failed to parse factor")
 }
 
-func (p *JParser) power() (*JNode, error) {
+func (p *JParser) power() (JNode, error) {
 	return p.binOp(p.atom, set.NewSet(token.POW), p.factor)
 }
 
-func (p *JParser) factor() (*JNode, error) {
+func (p *JParser) factor() (JNode, error) {
 	currentToken := p.CurrentToken
 
 	switch currentToken.Type {
@@ -182,12 +184,13 @@ func (p *JParser) factor() (*JNode, error) {
 			return nil, err
 		}
 
-		return &JNode{
-			Type:     UnaryOp,
-			Token:    currentToken,
-			Node:     factor,
-			StartPos: currentToken.StartPos,
-			EndPos:   factor.EndPos,
+		return &JUnaryOpNode{
+			JBaseNode: &JBaseNode{
+				Token:    currentToken,
+				StartPos: currentToken.StartPos,
+				EndPos:   factor.GetEndPos(),
+			},
+			Node: factor,
 		}, nil
 
 	default:
@@ -195,15 +198,15 @@ func (p *JParser) factor() (*JNode, error) {
 	}
 }
 
-func (p *JParser) term() (*JNode, error) {
+func (p *JParser) term() (JNode, error) {
 	return p.binOp(p.factor, set.NewSet(token.MUL, token.DIV), nil)
 }
 
-func (p *JParser) arithmeticExpr() (*JNode, error) {
+func (p *JParser) arithmeticExpr() (JNode, error) {
 	return p.binOp(p.term, set.NewSet(token.PLUS, token.MINUS), nil)
 }
 
-func (p *JParser) compareExpr() (*JNode, error) {
+func (p *JParser) compareExpr() (JNode, error) {
 	currentToken := p.CurrentToken
 
 	if currentToken.Match(token.KEYWORD, token.NOT) {
@@ -214,19 +217,20 @@ func (p *JParser) compareExpr() (*JNode, error) {
 			return nil, err
 		}
 
-		return &JNode{
-			Type:     UnaryOp,
-			Token:    currentToken,
-			Node:     compExpr,
-			StartPos: currentToken.StartPos,
-			EndPos:   compExpr.EndPos,
+		return &JUnaryOpNode{
+			JBaseNode: &JBaseNode{
+				Token:    currentToken,
+				StartPos: currentToken.StartPos,
+				EndPos:   compExpr.GetEndPos(),
+			},
+			Node: compExpr,
 		}, nil
 	}
 
 	return p.binOp(p.arithmeticExpr, set.NewSet(token.EE, token.NE, token.LT, token.LTE, token.GT, token.GTE), nil)
 }
 
-func (p *JParser) expr() (*JNode, error) {
+func (p *JParser) expr() (JNode, error) {
 	// check if it is an assignment expression
 	if p.CurrentToken.Type == token.IDENTIFIER {
 		varToken := p.CurrentToken
@@ -240,12 +244,13 @@ func (p *JParser) expr() (*JNode, error) {
 				return nil, err
 			}
 
-			return &JNode{
-				Type:     VarAssign,
-				Token:    varToken,
-				Node:     expr,
-				StartPos: varToken.StartPos,
-				EndPos:   expr.EndPos,
+			return &JVarAssignNode{
+				JBaseNode: &JBaseNode{
+					Token:    varToken,
+					StartPos: varToken.StartPos,
+					EndPos:   expr.GetEndPos(),
+				},
+				Node: expr,
 			}, nil
 		} else if p.CurrentToken.Type == token.IDENTIFIER {
 			// no support consecutive identifiers
@@ -265,7 +270,7 @@ func (p *JParser) expr() (*JNode, error) {
 	return p.binOp(p.compareExpr, set.NewSet(token.AND, token.OR), nil)
 }
 
-func (p *JParser) binOp(getNodeFuncA getNodeFunc, ops *set.Set, getNodeFuncB getNodeFunc) (*JNode, error) {
+func (p *JParser) binOp(getNodeFuncA getNodeFunc, ops *set.Set, getNodeFuncB getNodeFunc) (JNode, error) {
 	if getNodeFuncB == nil {
 		getNodeFuncB = getNodeFuncA
 	}
@@ -285,20 +290,21 @@ func (p *JParser) binOp(getNodeFuncA getNodeFunc, ops *set.Set, getNodeFuncB get
 			return nil, err
 		}
 
-		leftNode = &JNode{
-			Type:      BinOp,
+		leftNode = &JBinOpNode{
+			JBaseNode: &JBaseNode{
+				Token:    opToken,
+				StartPos: leftNode.GetStartPos(),
+				EndPos:   rightNode.GetEndPos(),
+			},
 			LeftNode:  leftNode,
 			RightNode: rightNode,
-			Token:     opToken,
-			StartPos:  leftNode.StartPos,
-			EndPos:    rightNode.EndPos,
 		}
 	}
 
 	return leftNode, nil
 }
 
-func (p *JParser) parseThenExpr(cases [][2]*JNode) ([][2]*JNode, error) {
+func (p *JParser) parseThenExpr(cases [][2]JNode) ([][2]JNode, error) {
 	p.advance()
 
 	condition, err := p.expr()
@@ -323,7 +329,7 @@ func (p *JParser) parseThenExpr(cases [][2]*JNode) ([][2]*JNode, error) {
 		return nil, err
 	}
 
-	cases = append(cases, [2]*JNode{condition, expr})
+	cases = append(cases, [2]JNode{condition, expr})
 
 	return cases, nil
 }

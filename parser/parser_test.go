@@ -18,12 +18,12 @@ func TestJParser_Parse(t *testing.T) {
 	testCases := []struct {
 		name        string
 		text        string
-		checkResult func(t *testing.T, tokens *parser.JNode, err error)
+		checkResult func(t *testing.T, tokens parser.JNode, err error)
 	}{
 		{
 			name: "OK1",
 			text: "(-1 + 2) * 13 / 24 - 5.8",
-			checkResult: func(t *testing.T, node *parser.JNode, err error) {
+			checkResult: func(t *testing.T, node parser.JNode, err error) {
 				t.Helper()
 				require.NoError(t, err)
 				require.NotEmpty(t, node, err)
@@ -35,7 +35,7 @@ func TestJParser_Parse(t *testing.T) {
 		{
 			name: "OK2",
 			text: "1 + (a = 2)",
-			checkResult: func(t *testing.T, node *parser.JNode, err error) {
+			checkResult: func(t *testing.T, node parser.JNode, err error) {
 				t.Helper()
 				require.NoError(t, err)
 				require.NotEmpty(t, node, err)
@@ -48,7 +48,7 @@ func TestJParser_Parse(t *testing.T) {
 		{
 			name: "Invalid Syntax1",
 			text: "1 + ",
-			checkResult: func(t *testing.T, node *parser.JNode, err error) {
+			checkResult: func(t *testing.T, node parser.JNode, err error) {
 				t.Helper()
 				require.Error(t, err)
 				require.IsType(t, &common.JInvalidSyntaxError{}, errors.Cause(err))
@@ -59,7 +59,7 @@ func TestJParser_Parse(t *testing.T) {
 		{
 			name: "Invalid Syntax2",
 			text: "1 + *2",
-			checkResult: func(t *testing.T, node *parser.JNode, err error) {
+			checkResult: func(t *testing.T, node parser.JNode, err error) {
 				t.Helper()
 				require.Error(t, err)
 				require.IsType(t, &common.JInvalidSyntaxError{}, errors.Cause(err))
@@ -70,7 +70,7 @@ func TestJParser_Parse(t *testing.T) {
 		{
 			name: "Invalid Syntax3",
 			text: "1 * (-2 * (3 / (2 * 5))",
-			checkResult: func(t *testing.T, node *parser.JNode, err error) {
+			checkResult: func(t *testing.T, node parser.JNode, err error) {
 				t.Helper()
 				require.Error(t, err)
 				require.IsType(t, &common.JInvalidSyntaxError{}, errors.Cause(err))
@@ -81,7 +81,7 @@ func TestJParser_Parse(t *testing.T) {
 		{
 			name: "Invalid Syntax4",
 			text: "1 + a = 2",
-			checkResult: func(t *testing.T, node *parser.JNode, err error) {
+			checkResult: func(t *testing.T, node parser.JNode, err error) {
 				t.Helper()
 				require.Error(t, err)
 				require.IsType(t, &common.JInvalidSyntaxError{}, errors.Cause(err))
@@ -92,7 +92,7 @@ func TestJParser_Parse(t *testing.T) {
 		{
 			name: "Invalid Syntax5",
 			text: "(5 - 5) OR (1 + 2) AND NOT 0 NOT 1",
-			checkResult: func(t *testing.T, node *parser.JNode, err error) {
+			checkResult: func(t *testing.T, node parser.JNode, err error) {
 				t.Helper()
 				require.Error(t, err)
 				require.IsType(t, &common.JInvalidSyntaxError{}, errors.Cause(err))
