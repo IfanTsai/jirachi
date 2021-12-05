@@ -34,11 +34,11 @@ func Run() {
 			continue
 		}
 
-		ast, err := interpreter.Run("stdin", line)
+		res, err := interpreter.Run("stdin", line)
 		if err != nil {
 			fmt.Printf("%+v\n", err)
-		} else {
-			fmt.Printf("%v\n", ast)
+		} else if res != nil {
+			fmt.Printf("%v\n", res)
 		}
 	}
 }

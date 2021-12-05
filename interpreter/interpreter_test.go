@@ -51,7 +51,7 @@ func TestJInterpreter_Visit(t *testing.T) {
 			},
 		},
 		{
-			name: "OK4",
+			name: "OK4: variable assign",
 			text: "1 + (a = 2)",
 			checkResult: func(t *testing.T, number *interpreter.JNumber, err error) {
 				t.Helper()
@@ -66,7 +66,7 @@ func TestJInterpreter_Visit(t *testing.T) {
 			},
 		},
 		{
-			name: "OK5",
+			name: "OK5: variable access",
 			text: "b + 3",
 			preRun: func(t *testing.T) {
 				t.Helper()
@@ -80,7 +80,7 @@ func TestJInterpreter_Visit(t *testing.T) {
 				require.NotNil(t, ast)
 
 				context := common.NewJContext("test", interpreter.GlobalSymbolTable, nil, nil)
-				number, err := interpreter.NewJInterpreter(context).Visit(ast)
+				number, err := interpreter.NewJInterpreter(context).Interpreter(ast)
 				require.NoError(t, err)
 				require.NotNil(t, number)
 			},
@@ -97,7 +97,7 @@ func TestJInterpreter_Visit(t *testing.T) {
 			},
 		},
 		{
-			name: "OK6",
+			name: "OK6: logical operation",
 			text: "5 - 5 OR 1 + 2 AND (NOT 0 AND 10) - 2 * 5",
 			checkResult: func(t *testing.T, number *interpreter.JNumber, err error) {
 				t.Helper()
@@ -107,7 +107,7 @@ func TestJInterpreter_Visit(t *testing.T) {
 			},
 		},
 		{
-			name: "OK7",
+			name: "OK7: logical operation",
 			text: "5 - 5 OR 1 + 2 AND NOT 0 AND 10 - 2 * 5",
 			checkResult: func(t *testing.T, number *interpreter.JNumber, err error) {
 				t.Helper()
@@ -117,13 +117,53 @@ func TestJInterpreter_Visit(t *testing.T) {
 			},
 		},
 		{
-			name: "OK8",
+			name: "OK8: comparison operation",
 			text: " (3 > 2) OR 1 + 2 AND NOT 0 AND 10 - 2 * 5 AND (5 - 5 == 0)",
 			checkResult: func(t *testing.T, number *interpreter.JNumber, err error) {
 				t.Helper()
 				require.NoError(t, err)
 				require.IsType(t, 0, number.Value)
 				require.Equal(t, 0, number.Value.(int))
+			},
+		},
+		{
+			name: "OK9: if expression",
+			text: "IF 5 > 3 THEN 4 ELSE 5",
+			checkResult: func(t *testing.T, number *interpreter.JNumber, err error) {
+				t.Helper()
+				require.NoError(t, err)
+				require.IsType(t, 0, number.Value)
+				require.Equal(t, 4, number.Value.(int))
+			},
+		},
+		{
+			name: "OK10: if expression",
+			text: "IF 5 < 3 THEN 4 ELSE 5",
+			checkResult: func(t *testing.T, number *interpreter.JNumber, err error) {
+				t.Helper()
+				require.NoError(t, err)
+				require.IsType(t, 0, number.Value)
+				require.Equal(t, 5, number.Value.(int))
+			},
+		},
+		{
+			name: "OK11: if expression",
+			text: "IF 5 > 6 THEN 4 ELIF 5 > 4 THEN 6 ELSE 5",
+			checkResult: func(t *testing.T, number *interpreter.JNumber, err error) {
+				t.Helper()
+				require.NoError(t, err)
+				require.IsType(t, 0, number.Value)
+				require.Equal(t, 6, number.Value.(int))
+			},
+		},
+		{
+			name: "OK12: if expression",
+			text: "IF 5 == 6 THEN 4",
+			checkResult: func(t *testing.T, number *interpreter.JNumber, err error) {
+				t.Helper()
+				require.NoError(t, err)
+				require.IsType(t, nil, number.Value)
+				require.Equal(t, nil, number.Value)
 			},
 		},
 		{
@@ -174,7 +214,7 @@ func TestJInterpreter_Visit(t *testing.T) {
 				require.NotNil(t, ast)
 
 				context := common.NewJContext("test", interpreter.GlobalSymbolTable, nil, nil)
-				number, err := interpreter.NewJInterpreter(context).Visit(ast)
+				number, err := interpreter.NewJInterpreter(context).Interpreter(ast)
 				require.NoError(t, err)
 				require.NotNil(t, number)
 			},
@@ -216,7 +256,7 @@ func TestJInterpreter_Visit(t *testing.T) {
 			require.NotNil(t, ast)
 
 			context := common.NewJContext("test", interpreter.GlobalSymbolTable, nil, nil)
-			number, err := interpreter.NewJInterpreter(context).Visit(ast)
+			number, err := interpreter.NewJInterpreter(context).Interpreter(ast)
 			testCase.checkResult(t, number, err)
 		})
 	}
