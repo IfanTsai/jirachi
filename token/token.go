@@ -34,15 +34,23 @@ const (
 )
 
 const (
-	AND = "AND"
-	OR  = "OR"
-	NOT = "NOT"
+	AND  = "AND"
+	OR   = "OR"
+	NOT  = "NOT"
+	IF   = "IF"
+	THEN = "THEN"
+	ELIF = "ELIF"
+	ELSE = "ELSE"
 )
 
 var KEYWORDS = set.NewSet(
 	AND,
 	OR,
 	NOT,
+	IF,
+	THEN,
+	ELIF,
+	ELSE,
 )
 
 type JToken struct {

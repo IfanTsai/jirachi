@@ -400,6 +400,10 @@ func (n *JNumber) Not() (*JNumber, error) {
 	return NewJNumber(boolToNumber(res)).SetJContext(n.Context), nil
 }
 
+func (n *JNumber) IsTrue() bool {
+	return numberToBool(n.Value)
+}
+
 func boolToNumber(b bool) interface{} {
 	if b {
 		return 1

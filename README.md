@@ -10,7 +10,7 @@ The plan supports the following functions:
 - [x] Comparison Operation (==, !=, >, >=, <, <=)
 - [x] Logical Operation (NOT, AND, OR)
 - [x] Variable
-- [ ] Judgment Branch Statement (IF ... THEN ... ELIF ... ELSE ...)
+- [x] Judgment Branch Statement (IF ... THEN ... ELIF ... ELSE ...)
 - [ ] Loop Statement (FOR, WHILE)
 - [ ] Function
 - [ ] String

@@ -30,7 +30,7 @@ func Run(filename, text string) (interface{}, error) {
 
 	// run program
 	context := common.NewJContext("<program>", GlobalSymbolTable, nil, nil)
-	number, err := NewJInterpreter(context).Visit(ast)
+	number, err := NewJInterpreter(context).Interpreter(ast)
 	if err != nil {
 		return nil, err
 	}
@@ -48,7 +48,11 @@ func NewJInterpreter(context *common.JContext) *JInterpreter {
 	}
 }
 
-func (i *JInterpreter) Visit(node *parser.JNode) (*JNumber, error) {
+func (i *JInterpreter) Interpreter(ast *parser.JNode) (*JNumber, error) {
+	return i.visit(ast)
+}
+
+func (i *JInterpreter) visit(node *parser.JNode) (*JNumber, error) {
 	switch node.Type {
 	case parser.Number:
 		return i.visitNumberNode(node)
@@ -60,6 +64,8 @@ func (i *JInterpreter) Visit(node *parser.JNode) (*JNumber, error) {
 		return i.visitVarAssignNode(node)
 	case parser.VarAccess:
 		return i.visitVarAccessNode(node)
+	case parser.IfExpr:
+		return i.visitIfExprNode(node)
 	default:
 		return nil, errors.Wrap(&common.JInvalidSyntaxError{
 			JError: &common.JError{
@@ -78,7 +84,7 @@ func (i *JInterpreter) visitNumberNode(node *parser.JNode) (*JNumber, error) {
 func (i *JInterpreter) visitVarAssignNode(node *parser.JNode) (*JNumber, error) {
 	varName := node.Token.Value
 
-	value, err := i.Visit(node.Node)
+	value, err := i.visit(node.Node)
 	if err != nil {
 		return nil, err
 	}
@@ -86,6 +92,39 @@ func (i *JInterpreter) visitVarAssignNode(node *parser.JNode) (*JNumber, error) 
 	i.Context.SymbolTable.Set(varName, value)
 
 	return value, nil
+}
+
+func (i *JInterpreter) visitIfExprNode(node *parser.JNode) (*JNumber, error) {
+	for index := range node.Cases {
+		condition := node.Cases[index][0]
+		expr := node.Cases[index][1]
+
+		conditionValue, err := i.visit(condition)
+		if err != nil {
+			return nil, err
+		}
+
+		if conditionValue.IsTrue() {
+			exprValue, err := i.visit(expr)
+			if err != nil {
+				return nil, err
+			}
+
+			return exprValue.SetJContext(i.Context), nil
+		}
+	}
+
+	if node.ElseCase != nil {
+		elseValue, err := i.visit(node.ElseCase)
+		if err != nil {
+			return nil, err
+		}
+
+		return elseValue.SetJContext(i.Context), nil
+	}
+
+	// eg. IF false THEN 123
+	return NewJNumber(nil), nil
 }
 
 func (i *JInterpreter) visitVarAccessNode(node *parser.JNode) (*JNumber, error) {
@@ -106,12 +145,12 @@ func (i *JInterpreter) visitVarAccessNode(node *parser.JNode) (*JNumber, error) 
 }
 
 func (i *JInterpreter) visitBinOpNode(node *parser.JNode) (*JNumber, error) {
-	leftNumber, err := i.Visit(node.LeftNode)
+	leftNumber, err := i.visit(node.LeftNode)
 	if err != nil {
 		return nil, err
 	}
 
-	rightNUmber, err := i.Visit(node.RightNode)
+	rightNUmber, err := i.visit(node.RightNode)
 	if err != nil {
 		return nil, err
 	}
@@ -166,7 +205,7 @@ func (i *JInterpreter) visitBinOpNode(node *parser.JNode) (*JNumber, error) {
 }
 
 func (i *JInterpreter) visitUnaryOpNode(node *parser.JNode) (*JNumber, error) {
-	number, err := i.Visit(node.Node)
+	number, err := i.visit(node.Node)
 	if err != nil {
 		return nil, err
 	}
