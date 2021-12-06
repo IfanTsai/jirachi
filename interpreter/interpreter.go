@@ -2,6 +2,7 @@ package interpreter
 
 import (
 	"fmt"
+	"reflect"
 
 	"github.com/IfanTsai/jirachi/common"
 	"github.com/IfanTsai/jirachi/lexer"
@@ -66,6 +67,10 @@ func (i *JInterpreter) visit(node parser.JNode) (*JNumber, error) {
 		return i.visitVarAccessNode(node.(*parser.JVarAccessNode))
 	case parser.IfExpr:
 		return i.visitIfExprNode(node.(*parser.JIfExprNode))
+	case parser.ForExpr:
+		return i.visitForExprNode(node.(*parser.JForExprNode))
+	case parser.WhileExpr:
+		return i.visitWhileExprNode(node.(*parser.JWhileExprNode))
 	default:
 		return nil, errors.Wrap(&common.JInvalidSyntaxError{
 			JError: &common.JError{
@@ -92,39 +97,6 @@ func (i *JInterpreter) visitVarAssignNode(node *parser.JVarAssignNode) (*JNumber
 	i.Context.SymbolTable.Set(varName, value)
 
 	return value, nil
-}
-
-func (i *JInterpreter) visitIfExprNode(node *parser.JIfExprNode) (*JNumber, error) {
-	for index := range node.Cases {
-		condition := node.Cases[index][0]
-		expr := node.Cases[index][1]
-
-		conditionValue, err := i.visit(condition)
-		if err != nil {
-			return nil, err
-		}
-
-		if conditionValue.IsTrue() {
-			exprValue, err := i.visit(expr)
-			if err != nil {
-				return nil, err
-			}
-
-			return exprValue.SetJContext(i.Context), nil
-		}
-	}
-
-	if node.ElseCase != nil {
-		elseValue, err := i.visit(node.ElseCase)
-		if err != nil {
-			return nil, err
-		}
-
-		return elseValue.SetJContext(i.Context), nil
-	}
-
-	// eg. IF false THEN 123
-	return NewJNumber(nil), nil
 }
 
 func (i *JInterpreter) visitVarAccessNode(node *parser.JVarAccessNode) (*JNumber, error) {
@@ -221,4 +193,154 @@ func (i *JInterpreter) visitUnaryOpNode(node *parser.JUnaryOpNode) (*JNumber, er
 	}
 
 	return number.SetJPos(node.StartPos, node.EndPos), nil
+}
+
+func (i *JInterpreter) visitIfExprNode(node *parser.JIfExprNode) (*JNumber, error) {
+	for index := range node.Cases {
+		condition := node.Cases[index][0]
+		expr := node.Cases[index][1]
+
+		conditionValue, err := i.visit(condition)
+		if err != nil {
+			return nil, err
+		}
+
+		if conditionValue.IsTrue() {
+			exprValue, err := i.visit(expr)
+			if err != nil {
+				return nil, err
+			}
+
+			return exprValue.SetJContext(i.Context), nil
+		}
+	}
+
+	if node.ElseCase != nil {
+		elseValue, err := i.visit(node.ElseCase)
+		if err != nil {
+			return nil, err
+		}
+
+		return elseValue.SetJContext(i.Context), nil
+	}
+
+	// eg. IF false THEN 123
+	return NewJNumber(nil), nil
+}
+
+func (i *JInterpreter) visitWhileExprNode(node *parser.JWhileExprNode) (*JNumber, error) {
+	var res *JNumber
+
+	for {
+		condition, err := i.visit(node.ConditionNode)
+		if err != nil {
+			return nil, err
+		}
+
+		if !condition.IsTrue() {
+			break
+		}
+
+		res, err = i.visit(node.BodyNode)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	if res == nil {
+		return NewJNumber(nil), nil
+	}
+
+	return res, nil
+}
+
+func (i *JInterpreter) visitForExprNode(node *parser.JForExprNode) (*JNumber, error) {
+	startNumber, err := i.visit(node.StartValueNode)
+	if err != nil {
+		return nil, err
+	}
+
+	endNumber, err := i.visit(node.EndValueNode)
+	if err != nil {
+		return nil, err
+	}
+
+	var stepNumber *JNumber
+	if node.StepValueNode != nil {
+		stepNumber, err = i.visit(node.StepValueNode)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		stepNumber = NewJNumber(1)
+	}
+
+	isFloat := false
+
+	if _, ok := startNumber.Value.(float64); ok {
+		isFloat = true
+	} else if _, ok := endNumber.Value.(float64); ok {
+		isFloat = true
+	} else if _, ok := stepNumber.Value.(float64); ok {
+		isFloat = true
+	}
+
+	var res *JNumber
+
+	if isFloat {
+		var start, end, step float64
+		if reflect.TypeOf(startNumber.Value).Kind() == reflect.Int {
+			start = float64(reflect.ValueOf(startNumber.Value).Int())
+		} else {
+			start = reflect.ValueOf(startNumber.Value).Float()
+		}
+
+		if reflect.TypeOf(endNumber.Value).Kind() == reflect.Int {
+			end = float64(reflect.ValueOf(endNumber.Value).Int())
+		} else {
+			end = reflect.ValueOf(endNumber.Value).Float()
+		}
+
+		if reflect.TypeOf(stepNumber.Value).Kind() == reflect.Int {
+			step = float64(reflect.ValueOf(stepNumber.Value).Int())
+		} else {
+			step = reflect.ValueOf(stepNumber.Value).Float()
+		}
+
+		for j := start; ; j += step {
+			if (step > 0 && j >= end) || (step < 0 && j <= end) {
+				break
+			}
+
+			i.Context.SymbolTable.Set(node.Token.Value, NewJNumber(j))
+
+			res, err = i.visit(node.BodyNode)
+			if err != nil {
+				return nil, err
+			}
+		}
+	} else {
+		start := int(reflect.ValueOf(startNumber.Value).Int())
+		end := int(reflect.ValueOf(endNumber.Value).Int())
+		step := int(reflect.ValueOf(stepNumber.Value).Int())
+
+		for j := start; ; j += step {
+			if (step > 0 && j >= end) || (step < 0 && j <= end) {
+				break
+			}
+
+			i.Context.SymbolTable.Set(node.Token.Value, NewJNumber(j))
+
+			res, err = i.visit(node.BodyNode)
+			if err != nil {
+				return nil, err
+			}
+		}
+	}
+
+	if res == nil {
+		return NewJNumber(nil), nil
+	}
+
+	return res, nil
 }

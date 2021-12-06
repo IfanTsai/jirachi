@@ -8,11 +8,31 @@ import (
 	"github.com/chzyer/readline"
 )
 
+var completer = readline.NewPrefixCompleter(
+	readline.PcItem("AND"),
+	readline.PcItem("OR"),
+	readline.PcItem("NOT"),
+	readline.PcItem("IF"),
+	readline.PcItem("THEN"),
+	readline.PcItem("ELIF"),
+	readline.PcItem("ELSE"),
+	readline.PcItem("FOR",
+		readline.PcItem("i = 0", readline.PcItem("TO 10",
+			readline.PcItem("STEP 1",
+				readline.PcItem("THEN"),
+			),
+			readline.PcItem("THEN")),
+		),
+	),
+	readline.PcItem("WHILE"),
+)
+
 func Run() {
 	reader, err := readline.NewEx(&readline.Config{
 		Prompt:            "\u001B[33mjirachi\u001B[0m \033[32m»\033[0m ",
 		HistoryFile:       "/tmp/.jirachi_repl.tmp",
 		HistorySearchFold: true,
+		AutoComplete:      completer,
 	})
 	if err != nil {
 		panic(err)
