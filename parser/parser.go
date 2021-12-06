@@ -1,6 +1,8 @@
 package parser
 
 import (
+	"fmt"
+
 	"github.com/IfanTsai/jirachi/common"
 	"github.com/IfanTsai/jirachi/pkg/set"
 	"github.com/IfanTsai/jirachi/token"
@@ -57,6 +59,152 @@ func (p *JParser) back() {
 	}
 }
 
+func (p *JParser) whileExpr() (JNode, error) {
+	if !p.CurrentToken.Match(token.KEYWORD, token.WHILE) {
+		return nil, errors.Wrap(&common.JInvalidSyntaxError{
+			JError: &common.JError{
+				StartPos: p.CurrentToken.StartPos,
+				EndPos:   p.CurrentToken.EndPos,
+			},
+			Details: fmt.Sprintf("Expected '%s'", token.WHILE),
+		}, "failed to parse while expression")
+	}
+
+	p.advance()
+
+	conditionExpr, err := p.expr()
+	if err != nil {
+		return nil, err
+	}
+
+	if !p.CurrentToken.Match(token.KEYWORD, token.THEN) {
+		return nil, errors.Wrap(&common.JInvalidSyntaxError{
+			JError: &common.JError{
+				StartPos: p.CurrentToken.StartPos,
+				EndPos:   p.CurrentToken.EndPos,
+			},
+			Details: fmt.Sprintf("Expect '%s'", token.THEN),
+		}, "failed to parse while expression")
+	}
+
+	p.advance()
+
+	bodyExpr, err := p.expr()
+	if err != nil {
+		return nil, err
+	}
+
+	return &JWhileExprNode{
+		JBaseNode: &JBaseNode{
+			StartPos: conditionExpr.GetStartPos(),
+			EndPos:   bodyExpr.GetEndPos(),
+		},
+		ConditionNode: conditionExpr,
+		BodyNode:      bodyExpr,
+	}, nil
+}
+
+func (p *JParser) forExpr() (JNode, error) {
+	if !p.CurrentToken.Match(token.KEYWORD, token.FOR) {
+		return nil, errors.Wrap(&common.JInvalidSyntaxError{
+			JError: &common.JError{
+				StartPos: p.CurrentToken.StartPos,
+				EndPos:   p.CurrentToken.EndPos,
+			},
+			Details: fmt.Sprintf("Expected '%s'", token.FOR),
+		}, "failed to parse for expression")
+	}
+
+	p.advance()
+
+	if p.CurrentToken.Type != token.IDENTIFIER {
+		return nil, errors.Wrap(&common.JInvalidSyntaxError{
+			JError: &common.JError{
+				StartPos: p.CurrentToken.StartPos,
+				EndPos:   p.CurrentToken.EndPos,
+			},
+			Details: "Expected identifier",
+		}, "failed to parse for expression")
+	}
+
+	varNameToken := p.CurrentToken
+
+	p.advance()
+
+	if p.CurrentToken.Type != token.EQ {
+		return nil, errors.Wrap(&common.JInvalidSyntaxError{
+			JError: &common.JError{
+				StartPos: p.CurrentToken.StartPos,
+				EndPos:   p.CurrentToken.EndPos,
+			},
+			Details: "Expected '='",
+		}, "failed to parse for expression")
+	}
+
+	p.advance()
+
+	startEXpr, err := p.expr()
+	if err != nil {
+		return nil, err
+	}
+
+	if !p.CurrentToken.Match(token.KEYWORD, token.TO) {
+		return nil, errors.Wrap(&common.JInvalidSyntaxError{
+			JError: &common.JError{
+				StartPos: p.CurrentToken.StartPos,
+				EndPos:   p.CurrentToken.EndPos,
+			},
+			Details: fmt.Sprintf("Expect '%s'", token.TO),
+		}, "failed to parse for expression")
+	}
+
+	p.advance()
+
+	endExpr, err := p.expr()
+	if err != nil {
+		return nil, err
+	}
+
+	var stepExpr JNode
+	if p.CurrentToken.Match(token.KEYWORD, token.STEP) {
+		p.advance()
+
+		stepExpr, err = p.expr()
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	if !p.CurrentToken.Match(token.KEYWORD, token.THEN) {
+		return nil, errors.Wrap(&common.JInvalidSyntaxError{
+			JError: &common.JError{
+				StartPos: p.CurrentToken.StartPos,
+				EndPos:   p.CurrentToken.EndPos,
+			},
+			Details: fmt.Sprintf("Expect '%s'", token.THEN),
+		}, "failed to parse for expression")
+	}
+
+	p.advance()
+
+	bodyExpr, err := p.expr()
+	if err != nil {
+		return nil, err
+	}
+
+	return &JForExprNode{
+		JBaseNode: &JBaseNode{
+			Token:    varNameToken,
+			StartPos: varNameToken.StartPos,
+			EndPos:   bodyExpr.GetEndPos(),
+		},
+		StartValueNode: startEXpr,
+		EndValueNode:   endExpr,
+		StepValueNode:  stepExpr,
+		BodyNode:       bodyExpr,
+	}, nil
+}
+
 func (p *JParser) ifExpr() (JNode, error) {
 	if !p.CurrentToken.Match(token.KEYWORD, token.IF) {
 		return nil, errors.Wrap(&common.JInvalidSyntaxError{
@@ -64,20 +212,20 @@ func (p *JParser) ifExpr() (JNode, error) {
 				StartPos: p.CurrentToken.StartPos,
 				EndPos:   p.CurrentToken.EndPos,
 			},
-			Details: "Expected 'IF'",
+			Details: fmt.Sprintf("Expected '%s'", token.IF),
 		}, "failed to parse if expression")
 	}
 
 	var elseCase JNode
 	cases := make([][2]JNode, 0, 3)
 
-	cases, err := p.parseThenExpr(cases)
+	cases, err := p.parseElifThenExpr(cases)
 	if err != nil {
 		return nil, err
 	}
 
 	for p.CurrentToken.Match(token.KEYWORD, token.ELIF) {
-		cases, err = p.parseThenExpr(cases)
+		cases, err = p.parseElifThenExpr(cases)
 		if err != nil {
 			return nil, err
 		}
@@ -157,6 +305,10 @@ func (p *JParser) atom() (JNode, error) {
 		switch currentToken.Value {
 		case token.IF:
 			return p.ifExpr()
+		case token.FOR:
+			return p.forExpr()
+		case token.WHILE:
+			return p.whileExpr()
 		}
 	}
 
@@ -304,7 +456,7 @@ func (p *JParser) binOp(getNodeFuncA getNodeFunc, ops *set.Set, getNodeFuncB get
 	return leftNode, nil
 }
 
-func (p *JParser) parseThenExpr(cases [][2]JNode) ([][2]JNode, error) {
+func (p *JParser) parseElifThenExpr(cases [][2]JNode) ([][2]JNode, error) {
 	p.advance()
 
 	condition, err := p.expr()
@@ -318,7 +470,7 @@ func (p *JParser) parseThenExpr(cases [][2]JNode) ([][2]JNode, error) {
 				StartPos: p.CurrentToken.StartPos,
 				EndPos:   p.CurrentToken.EndPos,
 			},
-			Details: "Expected 'THEN'",
+			Details: fmt.Sprintf("Expected '%s'", token.THEN),
 		}, "failed to parse if expression")
 	}
 
