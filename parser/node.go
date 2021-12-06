@@ -18,6 +18,8 @@ const (
 	BinOp
 	UnaryOp
 	IfExpr
+	ForExpr
+	WhileExpr
 )
 
 // JNode is general node interface of AST
@@ -137,5 +139,37 @@ func (n *JIfExprNode) Type() JNodeType {
 }
 
 func (n *JIfExprNode) String() string {
+	return n.Token.String()
+}
+
+// JForExprNode is for expression node structure of AST
+type JForExprNode struct {
+	*JBaseNode     // JBaseNode.Token is variable name token
+	StartValueNode JNode
+	EndValueNode   JNode
+	StepValueNode  JNode
+	BodyNode       JNode
+}
+
+func (n *JForExprNode) Type() JNodeType {
+	return ForExpr
+}
+
+func (n *JForExprNode) String() string {
+	return n.Token.String()
+}
+
+// JWhileExprNode is while expression node structure of AST
+type JWhileExprNode struct {
+	*JBaseNode
+	ConditionNode JNode
+	BodyNode      JNode
+}
+
+func (n *JWhileExprNode) Type() JNodeType {
+	return WhileExpr
+}
+
+func (n *JWhileExprNode) String() string {
 	return n.Token.String()
 }

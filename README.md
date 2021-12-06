@@ -11,7 +11,7 @@ The plan supports the following functions:
 - [x] Logical Operation (NOT, AND, OR)
 - [x] Variable
 - [x] Judgment Branch Statement (IF ... THEN ... ELIF ... ELSE ...)
-- [ ] Loop Statement (FOR, WHILE)
+- [x] Loop Statement (FOR, WHILE)
 - [ ] Function
 - [ ] String
 - [ ] List

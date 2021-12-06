@@ -167,6 +167,51 @@ func TestJInterpreter_Visit(t *testing.T) {
 			},
 		},
 		{
+			name: "OK13: for expression, default step",
+			text: "FOR i = 1 TO 6 THEN res13 = res13 * i",
+			preRun: func(t *testing.T) {
+				t.Helper()
+
+				assignVariable(t, "res13 = 1")
+			},
+			checkResult: func(t *testing.T, number *interpreter.JNumber, err error) {
+				t.Helper()
+				require.NoError(t, err)
+				require.IsType(t, 0, number.Value)
+				require.Equal(t, 120, number.Value)
+			},
+		},
+		{
+			name: "OK14: for expression, step = -1",
+			text: "FOR i = 5 TO 0 STEP -1 THEN res14 = res14 * i",
+			preRun: func(t *testing.T) {
+				t.Helper()
+
+				assignVariable(t, "res14 = 1")
+			},
+			checkResult: func(t *testing.T, number *interpreter.JNumber, err error) {
+				t.Helper()
+				require.NoError(t, err)
+				require.IsType(t, 0, number.Value)
+				require.Equal(t, 120, number.Value)
+			},
+		},
+		{
+			name: "OK15: while expression",
+			text: "WHILE res15 < 10000 THEN res15 = res15 + 1",
+			preRun: func(t *testing.T) {
+				t.Helper()
+
+				assignVariable(t, "res15 = 0")
+			},
+			checkResult: func(t *testing.T, number *interpreter.JNumber, err error) {
+				t.Helper()
+				require.NoError(t, err)
+				require.IsType(t, 0, number.Value)
+				require.Equal(t, 10000, number.Value)
+			},
+		},
+		{
 			name: "Division by zero integer number",
 			text: "13 / 0",
 			checkResult: func(t *testing.T, number *interpreter.JNumber, err error) {
@@ -260,4 +305,21 @@ func TestJInterpreter_Visit(t *testing.T) {
 			testCase.checkResult(t, number, err)
 		})
 	}
+}
+
+func assignVariable(t *testing.T, variableAssign string) {
+	t.Helper()
+
+	tokens, err := lexer.NewJLexer("stdin", variableAssign).MakeTokens()
+	require.NoError(t, err)
+	require.NotEmpty(t, tokens)
+
+	ast, err := parser.NewJParser(tokens, -1).Parse()
+	require.NoError(t, err)
+	require.NotNil(t, ast)
+
+	context := common.NewJContext("test", interpreter.GlobalSymbolTable, nil, nil)
+	number, err := interpreter.NewJInterpreter(context).Interpreter(ast)
+	require.NoError(t, err)
+	require.NotNil(t, number)
 }
