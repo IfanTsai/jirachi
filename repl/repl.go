@@ -1,12 +1,15 @@
 package repl
 
 import (
-	"errors"
 	"fmt"
+
+	"github.com/pkg/errors"
 
 	"github.com/IfanTsai/jirachi/interpreter"
 	"github.com/chzyer/readline"
 )
+
+var Release string
 
 var completer = readline.NewPrefixCompleter(
 	readline.PcItem("AND"),
@@ -56,7 +59,11 @@ func Run() {
 
 		res, err := interpreter.Run("stdin", line)
 		if err != nil {
-			fmt.Printf("%+v\n", err)
+			if Release == "true" {
+				fmt.Printf("%v\n", errors.Cause(err))
+			} else {
+				fmt.Printf("%+v\n", err)
+			}
 		} else if res != nil {
 			fmt.Printf("%v\n", res)
 		}
