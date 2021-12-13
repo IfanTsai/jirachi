@@ -2,6 +2,7 @@ package parser
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/IfanTsai/jirachi/common"
 
@@ -20,6 +21,8 @@ const (
 	IfExpr
 	ForExpr
 	WhileExpr
+	FuncDefExpr
+	CallExpr
 )
 
 // JNode is general node interface of AST
@@ -130,16 +133,12 @@ func (n *JVarAccessNode) String() string {
 // JIfExprNode is if expression node structure of AST
 type JIfExprNode struct {
 	*JBaseNode
-	Cases    [][2]JNode
-	ElseCase JNode
+	CaseNodes    [][2]JNode
+	ElseCaseNode JNode
 }
 
 func (n *JIfExprNode) Type() JNodeType {
 	return IfExpr
-}
-
-func (n *JIfExprNode) String() string {
-	return n.Token.String()
 }
 
 // JForExprNode is for expression node structure of AST
@@ -155,10 +154,6 @@ func (n *JForExprNode) Type() JNodeType {
 	return ForExpr
 }
 
-func (n *JForExprNode) String() string {
-	return n.Token.String()
-}
-
 // JWhileExprNode is while expression node structure of AST
 type JWhileExprNode struct {
 	*JBaseNode
@@ -170,6 +165,67 @@ func (n *JWhileExprNode) Type() JNodeType {
 	return WhileExpr
 }
 
-func (n *JWhileExprNode) String() string {
-	return n.Token.String()
+// JFuncDefNode is function definition node structure of AST
+type JFuncDefNode struct {
+	*JBaseNode // JBaseNode.Token is function name token
+	ArgTokens  []*token.JToken
+	BodyNode   JNode
+}
+
+func (n *JFuncDefNode) Type() JNodeType {
+	return FuncDefExpr
+}
+
+func (n *JFuncDefNode) String() string {
+	strBuilder := strings.Builder{}
+	strBuilder.WriteString("(<FUNCTION> ")
+	if n.Token != nil {
+		strBuilder.WriteString(n.Token.String())
+	}
+
+	strBuilder.WriteString(" <args>(")
+	for index, argToken := range n.ArgTokens {
+		if index != 0 {
+			strBuilder.WriteByte(' ')
+		}
+		strBuilder.WriteString(argToken.String())
+	}
+	strBuilder.WriteString(") ")
+
+	strBuilder.WriteString("<body>" + n.BodyNode.String())
+
+	strBuilder.WriteByte(')')
+
+	return strBuilder.String()
+}
+
+// JCallExprNode is call expression node structure of AST
+type JCallExprNode struct {
+	*JBaseNode // JBaseNode fields are not use
+	CallNode   JNode
+	ArgNodes   []JNode
+}
+
+func (n *JCallExprNode) Type() JNodeType {
+	return CallExpr
+}
+
+func (n *JCallExprNode) String() string {
+	strBuilder := strings.Builder{}
+
+	strBuilder.WriteString("(<FUNCTION> ")
+	strBuilder.WriteString(n.CallNode.String())
+
+	strBuilder.WriteString(" <args>(")
+	for index, argNode := range n.ArgNodes {
+		if index != 0 {
+			strBuilder.WriteByte(' ')
+		}
+		strBuilder.WriteString(argNode.String())
+	}
+	strBuilder.WriteByte(')')
+
+	strBuilder.WriteByte(')')
+
+	return strBuilder.String()
 }

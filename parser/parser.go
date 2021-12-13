@@ -252,8 +252,103 @@ func (p *JParser) ifExpr() (JNode, error) {
 			StartPos: cases[0][0].GetStartPos(),
 			EndPos:   endPos,
 		},
-		Cases:    cases,
-		ElseCase: elseCase,
+		CaseNodes:    cases,
+		ElseCaseNode: elseCase,
+	}, nil
+}
+
+func (p *JParser) funcDef() (JNode, error) {
+	if !p.CurrentToken.Match(token.KEYWORD, token.FUN) {
+		return nil, errors.Wrap(&common.JInvalidSyntaxError{
+			JError: &common.JError{
+				StartPos: p.CurrentToken.StartPos,
+				EndPos:   p.CurrentToken.EndPos,
+			},
+			Details: fmt.Sprintf("Expected '%s'", token.FUN),
+		}, "failed to parse function definition")
+	}
+
+	p.advance()
+
+	var varNameToken *token.JToken
+	if p.CurrentToken.Type == token.IDENTIFIER {
+		varNameToken = p.CurrentToken
+
+		p.advance()
+	}
+
+	if p.CurrentToken.Type != token.LPAREN {
+		return nil, errors.Wrap(&common.JInvalidSyntaxError{
+			JError: &common.JError{
+				StartPos: p.CurrentToken.StartPos,
+				EndPos:   p.CurrentToken.EndPos,
+			},
+			Details: "Expected '('",
+		}, "failed to parse function definition")
+	}
+
+	p.advance()
+
+	var argTokens []*token.JToken
+	if p.CurrentToken.Type == token.IDENTIFIER {
+		argTokens = append(argTokens, p.CurrentToken)
+
+		p.advance()
+
+		for p.CurrentToken.Type == token.COMMA {
+			p.advance()
+
+			if p.CurrentToken.Type != token.IDENTIFIER {
+				return nil, errors.Wrap(&common.JInvalidSyntaxError{
+					JError: &common.JError{
+						StartPos: p.CurrentToken.StartPos,
+						EndPos:   p.CurrentToken.EndPos,
+					},
+					Details: fmt.Sprintf("Expected '%s'", token.IDENTIFIER),
+				}, "failed to parse function definition")
+			}
+
+			argTokens = append(argTokens, p.CurrentToken)
+
+			p.advance()
+		}
+	}
+
+	if p.CurrentToken.Type != token.RPAREN {
+		return nil, errors.Wrap(&common.JInvalidSyntaxError{
+			JError: &common.JError{
+				StartPos: p.CurrentToken.StartPos,
+				EndPos:   p.CurrentToken.EndPos,
+			},
+			Details: "Expected '('",
+		}, "failed to parse function definition")
+	}
+
+	p.advance()
+
+	if p.CurrentToken.Type != token.ARROW {
+		return nil, errors.Wrap(&common.JInvalidSyntaxError{
+			JError: &common.JError{
+				StartPos: p.CurrentToken.StartPos,
+				EndPos:   p.CurrentToken.EndPos,
+			},
+			Details: "Expected '->'",
+		}, "failed to parse function definition")
+	}
+
+	p.advance()
+
+	bodyNode, err := p.expr()
+	if err != nil {
+		return nil, err
+	}
+
+	return &JFuncDefNode{
+		JBaseNode: &JBaseNode{
+			Token: varNameToken,
+		},
+		ArgTokens: argTokens,
+		BodyNode:  bodyNode,
 	}, nil
 }
 
@@ -309,6 +404,8 @@ func (p *JParser) atom() (JNode, error) {
 			return p.forExpr()
 		case token.WHILE:
 			return p.whileExpr()
+		case token.FUN:
+			return p.funcDef()
 		}
 	}
 
@@ -321,8 +418,71 @@ func (p *JParser) atom() (JNode, error) {
 	}, "failed to parse factor")
 }
 
+func (p *JParser) call() (JNode, error) {
+	atom, err := p.atom()
+	if err != nil {
+		return nil, err
+	}
+
+	if p.CurrentToken.Type == token.LPAREN {
+		p.advance()
+
+		var argNodes []JNode
+		if p.CurrentToken.Type == token.RPAREN {
+			p.advance()
+		} else {
+			expr, err := p.expr()
+			if err != nil {
+				return nil, errors.Wrap(&common.JInvalidSyntaxError{
+					JError: &common.JError{
+						StartPos: p.CurrentToken.StartPos,
+						EndPos:   p.CurrentToken.EndPos,
+					},
+					Details: "Expected ')', 'IF', 'FOR', 'WHILE', 'FUN', int, float, identifier, " +
+						"'+', '-', '(' or 'NOT'",
+				}, "failed to parse call expression ")
+			}
+
+			argNodes = append(argNodes, expr)
+
+			for p.CurrentToken.Type == token.COMMA {
+				p.advance()
+
+				expr, err := p.expr()
+				if err != nil {
+					return nil, err
+				}
+				argNodes = append(argNodes, expr)
+			}
+
+			if p.CurrentToken.Type != token.RPAREN {
+				return nil, errors.Wrap(&common.JInvalidSyntaxError{
+					JError: &common.JError{
+						StartPos: p.CurrentToken.StartPos,
+						EndPos:   p.CurrentToken.EndPos,
+					},
+					Details: "Expected ',' or ')'",
+				}, "failed to parse call expression ")
+			}
+
+			p.advance()
+		}
+
+		return &JCallExprNode{
+			JBaseNode: &JBaseNode{
+				StartPos: atom.GetStartPos(),
+				EndPos:   argNodes[len(argNodes)-1].GetEndPos(),
+			},
+			CallNode: atom,
+			ArgNodes: argNodes,
+		}, nil
+	}
+
+	return atom, nil
+}
+
 func (p *JParser) power() (JNode, error) {
-	return p.binOp(p.atom, set.NewSet(token.POW), p.factor)
+	return p.binOp(p.call, set.NewSet(token.POW), p.factor)
 }
 
 func (p *JParser) factor() (JNode, error) {
