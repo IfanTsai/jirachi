@@ -47,8 +47,8 @@ func (l *JLexer) MakeTokens() ([]*token.JToken, error) {
 			tokens = append(tokens, token.NewJToken(token.PLUS, nil, l.Pos, l.Pos))
 			advanceAble = l.advance()
 		case char == '-':
-			tokens = append(tokens, token.NewJToken(token.MINUS, nil, l.Pos, l.Pos))
-			advanceAble = l.advance()
+			tok, advanceAble = l.makeMinusOrArrowToken()
+			tokens = append(tokens, tok)
 		case char == '*':
 			tokens = append(tokens, token.NewJToken(token.MUL, nil, l.Pos, l.Pos))
 			advanceAble = l.advance()
@@ -79,6 +79,9 @@ func (l *JLexer) MakeTokens() ([]*token.JToken, error) {
 		case char == '>':
 			tok, advanceAble = l.makeGreaterThanToken()
 			tokens = append(tokens, tok)
+		case char == ',':
+			tokens = append(tokens, token.NewJToken(token.COMMA, nil, l.Pos, l.Pos))
+			advanceAble = l.advance()
 		default:
 			startPos := l.Pos.Copy()
 			l.advance()
@@ -171,6 +174,20 @@ func (l *JLexer) makeIdentifierToken() (*token.JToken, bool) {
 	}
 
 	return token.NewJToken(token.IDENTIFIER, identifier, startPos, l.Pos), advanceAble
+}
+
+func (l *JLexer) makeMinusOrArrowToken() (*token.JToken, bool) {
+	startPos := l.Pos.Copy()
+	advanceAble := l.advance()
+	tokenType := token.MINUS
+
+	if l.getCurrentChar() == '>' {
+		advanceAble = l.advance()
+
+		tokenType = token.ARROW
+	}
+
+	return token.NewJToken(tokenType, nil, startPos, l.Pos), advanceAble
 }
 
 func (l *JLexer) makeNotEqualToken() (*token.JToken, bool, error) {

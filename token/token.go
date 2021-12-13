@@ -30,6 +30,8 @@ const (
 	GT         JTokenType = "GT"     // >
 	LTE        JTokenType = "LTE"    // <=
 	GTE        JTokenType = "GTE"    // >=
+	COMMA      JTokenType = "COMMA"  // ,
+	ARROW      JTokenType = "ARROW"  // ->
 	EOF        JTokenType = "EOF"
 )
 
@@ -45,6 +47,7 @@ const (
 	TO    = "TO"
 	STEP  = "STEP"
 	WHILE = "WHILE"
+	FUN   = "FUN"
 )
 
 var KEYWORDS = set.NewSet(
@@ -59,6 +62,7 @@ var KEYWORDS = set.NewSet(
 	TO,
 	STEP,
 	WHILE,
+	FUN,
 )
 
 type JToken struct {

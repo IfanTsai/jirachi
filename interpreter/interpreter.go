@@ -31,12 +31,12 @@ func Run(filename, text string) (interface{}, error) {
 
 	// run program
 	context := common.NewJContext("<program>", GlobalSymbolTable, nil, nil)
-	number, err := NewJInterpreter(context).Interpreter(ast)
+	resValue, err := NewJInterpreter(context).Interpreter(ast)
 	if err != nil {
 		return nil, err
 	}
 
-	return number.Value, nil
+	return resValue, nil
 }
 
 type JInterpreter struct {
@@ -49,11 +49,11 @@ func NewJInterpreter(context *common.JContext) *JInterpreter {
 	}
 }
 
-func (i *JInterpreter) Interpreter(ast parser.JNode) (*JNumber, error) {
+func (i *JInterpreter) Interpreter(ast parser.JNode) (JValue, error) {
 	return i.visit(ast)
 }
 
-func (i *JInterpreter) visit(node parser.JNode) (*JNumber, error) {
+func (i *JInterpreter) visit(node parser.JNode) (JValue, error) {
 	switch node.Type() {
 	case parser.Number:
 		return i.visitNumberNode(node.(*parser.JNumberNode))
@@ -71,6 +71,10 @@ func (i *JInterpreter) visit(node parser.JNode) (*JNumber, error) {
 		return i.visitForExprNode(node.(*parser.JForExprNode))
 	case parser.WhileExpr:
 		return i.visitWhileExprNode(node.(*parser.JWhileExprNode))
+	case parser.FuncDefExpr:
+		return i.visitFunDefNode(node.(*parser.JFuncDefNode))
+	case parser.CallExpr:
+		return i.visitCallExprNode(node.(*parser.JCallExprNode))
 	default:
 		return nil, errors.Wrap(&common.JInvalidSyntaxError{
 			JError: &common.JError{
@@ -82,27 +86,27 @@ func (i *JInterpreter) visit(node parser.JNode) (*JNumber, error) {
 	}
 }
 
-func (i *JInterpreter) visitNumberNode(node *parser.JNumberNode) (*JNumber, error) {
+func (i *JInterpreter) visitNumberNode(node *parser.JNumberNode) (JValue, error) {
 	return NewJNumber(node.Token.Value).SetJPos(node.StartPos, node.EndPos).SetJContext(i.Context), nil
 }
 
-func (i *JInterpreter) visitVarAssignNode(node *parser.JVarAssignNode) (*JNumber, error) {
+func (i *JInterpreter) visitVarAssignNode(node *parser.JVarAssignNode) (JValue, error) {
 	varName := node.Token.Value
 
-	value, err := i.visit(node.Node)
+	varValue, err := i.visit(node.Node)
 	if err != nil {
 		return nil, err
 	}
 
-	i.Context.SymbolTable.Set(varName, value)
+	i.Context.SymbolTable.Set(varName, varValue)
 
-	return value, nil
+	return varValue, nil
 }
 
-func (i *JInterpreter) visitVarAccessNode(node *parser.JVarAccessNode) (*JNumber, error) {
+func (i *JInterpreter) visitVarAccessNode(node *parser.JVarAccessNode) (JValue, error) {
 	varName := node.Token.Value
-	value := i.Context.SymbolTable.Get(varName)
-	if value == nil {
+	varValue := i.Context.SymbolTable.Get(varName)
+	if varValue == nil {
 		return nil, errors.Wrap(&common.JRunTimeError{
 			JError: &common.JError{
 				StartPos: node.StartPos,
@@ -113,51 +117,51 @@ func (i *JInterpreter) visitVarAccessNode(node *parser.JVarAccessNode) (*JNumber
 		}, "failed to access variable")
 	}
 
-	return NewJNumber(value.(*JNumber).Value).SetJPos(node.StartPos, node.EndPos).SetJContext(i.Context), nil
+	return varValue.(JValue).Copy().SetJPos(node.StartPos, node.EndPos).SetJContext(i.Context), nil
 }
 
-func (i *JInterpreter) visitBinOpNode(node *parser.JBinOpNode) (*JNumber, error) {
+func (i *JInterpreter) visitBinOpNode(node *parser.JBinOpNode) (JValue, error) {
 	leftNumber, err := i.visit(node.LeftNode)
 	if err != nil {
 		return nil, err
 	}
 
-	rightNUmber, err := i.visit(node.RightNode)
+	rightNumber, err := i.visit(node.RightNode)
 	if err != nil {
 		return nil, err
 	}
 
-	var resNumber *JNumber
+	var resNumber JValue
 
 	switch node.Token.Type {
 	case token.PLUS:
-		resNumber, err = leftNumber.AddTo(rightNUmber)
+		resNumber, err = leftNumber.AddTo(rightNumber)
 	case token.MINUS:
-		resNumber, err = leftNumber.SubBy(rightNUmber)
+		resNumber, err = leftNumber.SubBy(rightNumber)
 	case token.MUL:
-		resNumber, err = leftNumber.MulBy(rightNUmber)
+		resNumber, err = leftNumber.MulBy(rightNumber)
 	case token.DIV:
-		resNumber, err = leftNumber.DivBy(rightNUmber)
+		resNumber, err = leftNumber.DivBy(rightNumber)
 	case token.POW:
-		resNumber, err = leftNumber.PowBy(rightNUmber)
+		resNumber, err = leftNumber.PowBy(rightNumber)
 	case token.EE:
-		resNumber, err = leftNumber.EqualTo(rightNUmber)
+		resNumber, err = leftNumber.EqualTo(rightNumber)
 	case token.NE:
-		resNumber, err = leftNumber.NotEqualTo(rightNUmber)
+		resNumber, err = leftNumber.NotEqualTo(rightNumber)
 	case token.LT:
-		resNumber, err = leftNumber.LessThen(rightNUmber)
+		resNumber, err = leftNumber.LessThan(rightNumber)
 	case token.LTE:
-		resNumber, err = leftNumber.LessThenOrEqualTo(rightNUmber)
+		resNumber, err = leftNumber.LessThanOrEqualTo(rightNumber)
 	case token.GT:
-		resNumber, err = leftNumber.GreaterThen(rightNUmber)
+		resNumber, err = leftNumber.GreaterThan(rightNumber)
 	case token.GTE:
-		resNumber, err = leftNumber.GreaterThenOrEqualTo(rightNUmber)
+		resNumber, err = leftNumber.GreaterThanOrEqualTo(rightNumber)
 	case token.KEYWORD:
 		switch node.Token.Value {
 		case token.AND:
-			resNumber, err = leftNumber.AndBy(rightNUmber)
+			resNumber, err = leftNumber.AndBy(rightNumber)
 		case token.OR:
-			resNumber, err = leftNumber.OrBy(rightNUmber)
+			resNumber, err = leftNumber.OrBy(rightNumber)
 		}
 	default:
 		return nil, errors.Wrap(&common.JInvalidSyntaxError{
@@ -170,13 +174,13 @@ func (i *JInterpreter) visitBinOpNode(node *parser.JBinOpNode) (*JNumber, error)
 	}
 
 	if err != nil {
-		return nil, err
+		return nil, errors.WithMessage(err, "failed to visit bin op node")
 	}
 
 	return resNumber.SetJPos(node.StartPos, node.EndPos), nil
 }
 
-func (i *JInterpreter) visitUnaryOpNode(node *parser.JUnaryOpNode) (*JNumber, error) {
+func (i *JInterpreter) visitUnaryOpNode(node *parser.JUnaryOpNode) (JValue, error) {
 	number, err := i.visit(node.Node)
 	if err != nil {
 		return nil, err
@@ -189,16 +193,16 @@ func (i *JInterpreter) visitUnaryOpNode(node *parser.JUnaryOpNode) (*JNumber, er
 	}
 
 	if err != nil {
-		return nil, err
+		return nil, errors.WithMessage(err, "failed to visit unary op node")
 	}
 
 	return number.SetJPos(node.StartPos, node.EndPos), nil
 }
 
-func (i *JInterpreter) visitIfExprNode(node *parser.JIfExprNode) (*JNumber, error) {
-	for index := range node.Cases {
-		condition := node.Cases[index][0]
-		expr := node.Cases[index][1]
+func (i *JInterpreter) visitIfExprNode(node *parser.JIfExprNode) (JValue, error) {
+	for index := range node.CaseNodes {
+		condition := node.CaseNodes[index][0]
+		expr := node.CaseNodes[index][1]
 
 		conditionValue, err := i.visit(condition)
 		if err != nil {
@@ -215,8 +219,8 @@ func (i *JInterpreter) visitIfExprNode(node *parser.JIfExprNode) (*JNumber, erro
 		}
 	}
 
-	if node.ElseCase != nil {
-		elseValue, err := i.visit(node.ElseCase)
+	if node.ElseCaseNode != nil {
+		elseValue, err := i.visit(node.ElseCaseNode)
 		if err != nil {
 			return nil, err
 		}
@@ -228,8 +232,8 @@ func (i *JInterpreter) visitIfExprNode(node *parser.JIfExprNode) (*JNumber, erro
 	return NewJNumber(nil), nil
 }
 
-func (i *JInterpreter) visitWhileExprNode(node *parser.JWhileExprNode) (*JNumber, error) {
-	var res *JNumber
+func (i *JInterpreter) visitWhileExprNode(node *parser.JWhileExprNode) (JValue, error) {
+	var res JValue
 
 	for {
 		condition, err := i.visit(node.ConditionNode)
@@ -254,7 +258,7 @@ func (i *JInterpreter) visitWhileExprNode(node *parser.JWhileExprNode) (*JNumber
 	return res, nil
 }
 
-func (i *JInterpreter) visitForExprNode(node *parser.JForExprNode) (*JNumber, error) {
+func (i *JInterpreter) visitForExprNode(node *parser.JForExprNode) (JValue, error) {
 	startNumber, err := i.visit(node.StartValueNode)
 	if err != nil {
 		return nil, err
@@ -265,7 +269,7 @@ func (i *JInterpreter) visitForExprNode(node *parser.JForExprNode) (*JNumber, er
 		return nil, err
 	}
 
-	var stepNumber *JNumber
+	var stepNumber JValue
 	if node.StepValueNode != nil {
 		stepNumber, err = i.visit(node.StepValueNode)
 		if err != nil {
@@ -277,34 +281,34 @@ func (i *JInterpreter) visitForExprNode(node *parser.JForExprNode) (*JNumber, er
 
 	isFloat := false
 
-	if _, ok := startNumber.Value.(float64); ok {
+	if _, ok := startNumber.GetValue().(float64); ok {
 		isFloat = true
-	} else if _, ok := endNumber.Value.(float64); ok {
+	} else if _, ok := endNumber.GetValue().(float64); ok {
 		isFloat = true
-	} else if _, ok := stepNumber.Value.(float64); ok {
+	} else if _, ok := stepNumber.GetValue().(float64); ok {
 		isFloat = true
 	}
 
-	var res *JNumber
+	var res JValue
 
 	if isFloat {
 		var start, end, step float64
-		if reflect.TypeOf(startNumber.Value).Kind() == reflect.Int {
-			start = float64(reflect.ValueOf(startNumber.Value).Int())
+		if reflect.TypeOf(startNumber.GetValue()).Kind() == reflect.Int {
+			start = float64(reflect.ValueOf(startNumber.GetValue()).Int())
 		} else {
-			start = reflect.ValueOf(startNumber.Value).Float()
+			start = reflect.ValueOf(startNumber.GetValue()).Float()
 		}
 
-		if reflect.TypeOf(endNumber.Value).Kind() == reflect.Int {
-			end = float64(reflect.ValueOf(endNumber.Value).Int())
+		if reflect.TypeOf(endNumber.GetValue()).Kind() == reflect.Int {
+			end = float64(reflect.ValueOf(endNumber.GetValue()).Int())
 		} else {
-			end = reflect.ValueOf(endNumber.Value).Float()
+			end = reflect.ValueOf(endNumber.GetValue()).Float()
 		}
 
-		if reflect.TypeOf(stepNumber.Value).Kind() == reflect.Int {
-			step = float64(reflect.ValueOf(stepNumber.Value).Int())
+		if reflect.TypeOf(stepNumber.GetValue()).Kind() == reflect.Int {
+			step = float64(reflect.ValueOf(stepNumber.GetValue()).Int())
 		} else {
-			step = reflect.ValueOf(stepNumber.Value).Float()
+			step = reflect.ValueOf(stepNumber.GetValue()).Float()
 		}
 
 		for j := start; ; j += step {
@@ -320,9 +324,9 @@ func (i *JInterpreter) visitForExprNode(node *parser.JForExprNode) (*JNumber, er
 			}
 		}
 	} else {
-		start := int(reflect.ValueOf(startNumber.Value).Int())
-		end := int(reflect.ValueOf(endNumber.Value).Int())
-		step := int(reflect.ValueOf(stepNumber.Value).Int())
+		start := int(reflect.ValueOf(startNumber.GetValue()).Int())
+		end := int(reflect.ValueOf(endNumber.GetValue()).Int())
+		step := int(reflect.ValueOf(stepNumber.GetValue()).Int())
 
 		for j := start; ; j += step {
 			if (step > 0 && j >= end) || (step < 0 && j <= end) {
@@ -343,4 +347,59 @@ func (i *JInterpreter) visitForExprNode(node *parser.JForExprNode) (*JNumber, er
 	}
 
 	return res, nil
+}
+
+func (i *JInterpreter) visitFunDefNode(node *parser.JFuncDefNode) (JValue, error) {
+	argNames := make([]string, len(node.ArgTokens))
+	var ok bool
+	for index := range node.ArgTokens {
+		if argNames[index], ok = node.ArgTokens[index].Value.(string); !ok {
+			return nil, errors.Wrap(&common.JRunTimeError{
+				JError: &common.JError{
+					StartPos: node.StartPos,
+					EndPos:   node.EndPos,
+				},
+				Context: i.Context,
+				Details: "arg token value is not string",
+			}, "failed to visit function definition node")
+		}
+	}
+
+	var funcName interface{}
+	if node.Token != nil {
+		funcName = node.Token.Value
+	}
+
+	functionValue := NewJFunction(funcName, argNames, node.BodyNode).
+		SetJPos(node.StartPos, node.EndPos).
+		SetJContext(i.Context)
+
+	if funcName != nil {
+		i.Context.SymbolTable.Set(funcName, functionValue)
+	}
+
+	return functionValue, nil
+}
+
+func (i *JInterpreter) visitCallExprNode(node *parser.JCallExprNode) (JValue, error) {
+	callValue, err := i.visit(node.CallNode)
+	if err != nil {
+		return nil, err
+	}
+
+	argValues := make([]JValue, len(node.ArgNodes))
+	for index := range node.ArgNodes {
+		argValue, err := i.visit(node.ArgNodes[index])
+		if err != nil {
+			return nil, err
+		}
+		argValues[index] = argValue
+	}
+
+	returnValue, err := callValue.Execute(argValues)
+	if err != nil {
+		return nil, errors.WithMessage(err, "failed to visit call expression node")
+	}
+
+	return returnValue, nil
 }

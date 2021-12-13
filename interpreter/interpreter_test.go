@@ -18,46 +18,46 @@ func TestJInterpreter_Visit(t *testing.T) {
 		name        string
 		text        string
 		preRun      func(t *testing.T)
-		checkResult func(t *testing.T, number *interpreter.JNumber, err error)
+		checkResult func(t *testing.T, number interpreter.JValue, err error)
 	}{
 		{
 			name: "OK1",
 			text: "(-1 + 2 ^ 3) ^ 2 * 13 / (24 - 5.8)",
-			checkResult: func(t *testing.T, number *interpreter.JNumber, err error) {
+			checkResult: func(t *testing.T, number interpreter.JValue, err error) {
 				t.Helper()
 				require.NoError(t, err)
-				require.IsType(t, 0.0, number.Value)
-				require.Equal(t, 35.0, number.Value.(float64))
+				require.IsType(t, 0.0, number.GetValue())
+				require.Equal(t, 35.0, number.GetValue().(float64))
 			},
 		},
 		{
 			name: "OK2",
 			text: "---1",
-			checkResult: func(t *testing.T, number *interpreter.JNumber, err error) {
+			checkResult: func(t *testing.T, number interpreter.JValue, err error) {
 				t.Helper()
 				require.NoError(t, err)
-				require.IsType(t, 0, number.Value)
-				require.Equal(t, -1, number.Value.(int))
+				require.IsType(t, 0, number.GetValue())
+				require.Equal(t, -1, number.GetValue().(int))
 			},
 		},
 		{
 			name: "OK3",
 			text: "----1",
-			checkResult: func(t *testing.T, number *interpreter.JNumber, err error) {
+			checkResult: func(t *testing.T, number interpreter.JValue, err error) {
 				t.Helper()
 				require.NoError(t, err)
-				require.IsType(t, 0, number.Value)
-				require.Equal(t, 1, number.Value.(int))
+				require.IsType(t, 0, number.GetValue())
+				require.Equal(t, 1, number.GetValue().(int))
 			},
 		},
 		{
 			name: "OK4: variable assign",
 			text: "1 + (a = 2)",
-			checkResult: func(t *testing.T, number *interpreter.JNumber, err error) {
+			checkResult: func(t *testing.T, number interpreter.JValue, err error) {
 				t.Helper()
 				require.NoError(t, err)
-				require.IsType(t, 0, number.Value)
-				require.Equal(t, 3, number.Value.(int))
+				require.IsType(t, 0, number.GetValue())
+				require.Equal(t, 3, number.GetValue().(int))
 
 				varNumber := interpreter.GlobalSymbolTable.Get("a")
 				require.IsType(t, &interpreter.JNumber{}, varNumber)
@@ -84,11 +84,11 @@ func TestJInterpreter_Visit(t *testing.T) {
 				require.NoError(t, err)
 				require.NotNil(t, number)
 			},
-			checkResult: func(t *testing.T, number *interpreter.JNumber, err error) {
+			checkResult: func(t *testing.T, number interpreter.JValue, err error) {
 				t.Helper()
 				require.NoError(t, err)
-				require.IsType(t, 0, number.Value)
-				require.Equal(t, 8, number.Value.(int))
+				require.IsType(t, 0, number.GetValue())
+				require.Equal(t, 8, number.GetValue().(int))
 
 				varNumber := interpreter.GlobalSymbolTable.Get("b")
 				require.IsType(t, &interpreter.JNumber{}, varNumber)
@@ -99,71 +99,71 @@ func TestJInterpreter_Visit(t *testing.T) {
 		{
 			name: "OK6: logical operation",
 			text: "5 - 5 OR 1 + 2 AND (NOT 0 AND 10) - 2 * 5",
-			checkResult: func(t *testing.T, number *interpreter.JNumber, err error) {
+			checkResult: func(t *testing.T, number interpreter.JValue, err error) {
 				t.Helper()
 				require.NoError(t, err)
-				require.IsType(t, 0, number.Value)
-				require.Equal(t, 0, number.Value.(int))
+				require.IsType(t, 0, number.GetValue())
+				require.Equal(t, 0, number.GetValue().(int))
 			},
 		},
 		{
 			name: "OK7: logical operation",
 			text: "5 - 5 OR 1 + 2 AND NOT 0 AND 10 - 2 * 5",
-			checkResult: func(t *testing.T, number *interpreter.JNumber, err error) {
+			checkResult: func(t *testing.T, number interpreter.JValue, err error) {
 				t.Helper()
 				require.NoError(t, err)
-				require.IsType(t, 0, number.Value)
-				require.Equal(t, 0, number.Value.(int))
+				require.IsType(t, 0, number.GetValue())
+				require.Equal(t, 0, number.GetValue().(int))
 			},
 		},
 		{
 			name: "OK8: comparison operation",
 			text: " (3 > 2) OR 1 + 2 AND NOT 0 AND 10 - 2 * 5 AND (5 - 5 == 0)",
-			checkResult: func(t *testing.T, number *interpreter.JNumber, err error) {
+			checkResult: func(t *testing.T, number interpreter.JValue, err error) {
 				t.Helper()
 				require.NoError(t, err)
-				require.IsType(t, 0, number.Value)
-				require.Equal(t, 0, number.Value.(int))
+				require.IsType(t, 0, number.GetValue())
+				require.Equal(t, 0, number.GetValue().(int))
 			},
 		},
 		{
 			name: "OK9: if expression",
 			text: "IF 5 > 3 THEN 4 ELSE 5",
-			checkResult: func(t *testing.T, number *interpreter.JNumber, err error) {
+			checkResult: func(t *testing.T, number interpreter.JValue, err error) {
 				t.Helper()
 				require.NoError(t, err)
-				require.IsType(t, 0, number.Value)
-				require.Equal(t, 4, number.Value.(int))
+				require.IsType(t, 0, number.GetValue())
+				require.Equal(t, 4, number.GetValue().(int))
 			},
 		},
 		{
 			name: "OK10: if expression",
 			text: "IF 5 < 3 THEN 4 ELSE 5",
-			checkResult: func(t *testing.T, number *interpreter.JNumber, err error) {
+			checkResult: func(t *testing.T, number interpreter.JValue, err error) {
 				t.Helper()
 				require.NoError(t, err)
-				require.IsType(t, 0, number.Value)
-				require.Equal(t, 5, number.Value.(int))
+				require.IsType(t, 0, number.GetValue())
+				require.Equal(t, 5, number.GetValue().(int))
 			},
 		},
 		{
 			name: "OK11: if expression",
 			text: "IF 5 > 6 THEN 4 ELIF 5 > 4 THEN 6 ELSE 5",
-			checkResult: func(t *testing.T, number *interpreter.JNumber, err error) {
+			checkResult: func(t *testing.T, number interpreter.JValue, err error) {
 				t.Helper()
 				require.NoError(t, err)
-				require.IsType(t, 0, number.Value)
-				require.Equal(t, 6, number.Value.(int))
+				require.IsType(t, 0, number.GetValue())
+				require.Equal(t, 6, number.GetValue().(int))
 			},
 		},
 		{
 			name: "OK12: if expression",
 			text: "IF 5 == 6 THEN 4",
-			checkResult: func(t *testing.T, number *interpreter.JNumber, err error) {
+			checkResult: func(t *testing.T, number interpreter.JValue, err error) {
 				t.Helper()
 				require.NoError(t, err)
-				require.IsType(t, nil, number.Value)
-				require.Equal(t, nil, number.Value)
+				require.IsType(t, nil, number.GetValue())
+				require.Equal(t, nil, number.GetValue())
 			},
 		},
 		{
@@ -174,11 +174,11 @@ func TestJInterpreter_Visit(t *testing.T) {
 
 				assignVariable(t, "res13 = 1")
 			},
-			checkResult: func(t *testing.T, number *interpreter.JNumber, err error) {
+			checkResult: func(t *testing.T, number interpreter.JValue, err error) {
 				t.Helper()
 				require.NoError(t, err)
-				require.IsType(t, 0, number.Value)
-				require.Equal(t, 120, number.Value)
+				require.IsType(t, 0, number.GetValue())
+				require.Equal(t, 120, number.GetValue())
 			},
 		},
 		{
@@ -189,11 +189,11 @@ func TestJInterpreter_Visit(t *testing.T) {
 
 				assignVariable(t, "res14 = 1")
 			},
-			checkResult: func(t *testing.T, number *interpreter.JNumber, err error) {
+			checkResult: func(t *testing.T, number interpreter.JValue, err error) {
 				t.Helper()
 				require.NoError(t, err)
-				require.IsType(t, 0, number.Value)
-				require.Equal(t, 120, number.Value)
+				require.IsType(t, 0, number.GetValue())
+				require.Equal(t, 120, number.GetValue())
 			},
 		},
 		{
@@ -204,17 +204,32 @@ func TestJInterpreter_Visit(t *testing.T) {
 
 				assignVariable(t, "res15 = 0")
 			},
-			checkResult: func(t *testing.T, number *interpreter.JNumber, err error) {
+			checkResult: func(t *testing.T, number interpreter.JValue, err error) {
 				t.Helper()
 				require.NoError(t, err)
-				require.IsType(t, 0, number.Value)
-				require.Equal(t, 10000, number.Value)
+				require.IsType(t, 0, number.GetValue())
+				require.Equal(t, 10000, number.GetValue())
+			},
+		},
+		{
+			name: "OK16: function",
+			text: "add(1, 2)",
+			preRun: func(t *testing.T) {
+				t.Helper()
+
+				assignVariable(t, "add = FUN(a, b) -> a + b")
+			},
+			checkResult: func(t *testing.T, number interpreter.JValue, err error) {
+				t.Helper()
+				require.NoError(t, err)
+				require.IsType(t, 0, number.GetValue())
+				require.Equal(t, 3, number.GetValue())
 			},
 		},
 		{
 			name: "Division by zero integer number",
 			text: "13 / 0",
-			checkResult: func(t *testing.T, number *interpreter.JNumber, err error) {
+			checkResult: func(t *testing.T, number interpreter.JValue, err error) {
 				t.Helper()
 				require.Error(t, err)
 				require.IsType(t, &common.JRunTimeError{}, errors.Cause(err))
@@ -225,7 +240,7 @@ func TestJInterpreter_Visit(t *testing.T) {
 		{
 			name: "Division by zero float number",
 			text: "13 / 0.0",
-			checkResult: func(t *testing.T, number *interpreter.JNumber, err error) {
+			checkResult: func(t *testing.T, number interpreter.JValue, err error) {
 				t.Helper()
 				require.Error(t, err)
 				require.IsType(t, &common.JRunTimeError{}, errors.Cause(err))
@@ -236,7 +251,7 @@ func TestJInterpreter_Visit(t *testing.T) {
 		{
 			name: "Division by zero expression",
 			text: "13 / (5 - 5)",
-			checkResult: func(t *testing.T, number *interpreter.JNumber, err error) {
+			checkResult: func(t *testing.T, number interpreter.JValue, err error) {
 				t.Helper()
 				require.Error(t, err)
 				require.IsType(t, &common.JRunTimeError{}, errors.Cause(err))
@@ -263,7 +278,7 @@ func TestJInterpreter_Visit(t *testing.T) {
 				require.NoError(t, err)
 				require.NotNil(t, number)
 			},
-			checkResult: func(t *testing.T, number *interpreter.JNumber, err error) {
+			checkResult: func(t *testing.T, number interpreter.JValue, err error) {
 				t.Helper()
 				require.Error(t, err)
 				require.IsType(t, &common.JRunTimeError{}, errors.Cause(err))
@@ -274,7 +289,7 @@ func TestJInterpreter_Visit(t *testing.T) {
 		{
 			name: "Variable is not defined",
 			text: "13 / (abc - 2)",
-			checkResult: func(t *testing.T, number *interpreter.JNumber, err error) {
+			checkResult: func(t *testing.T, number interpreter.JValue, err error) {
 				t.Helper()
 				require.Error(t, err)
 				require.IsType(t, &common.JRunTimeError{}, errors.Cause(err))

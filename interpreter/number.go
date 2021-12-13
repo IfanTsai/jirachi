@@ -10,35 +10,42 @@ import (
 type JNumberType int
 
 type JNumber struct {
-	Value    interface{} // only support int and float64
-	StartPos *common.JPosition
-	EndPos   *common.JPosition
-	Context  *common.JContext
+	*JBaseValue
 }
 
 func NewJNumber(value interface{}) *JNumber {
 	return &JNumber{
-		Value: value,
+		JBaseValue: &JBaseValue{
+			Value: value,
+		},
 	}
 }
 
-func (n *JNumber) SetJPos(startPos, endPos *common.JPosition) *JNumber {
+func (n *JNumber) SetJPos(startPos, endPos *common.JPosition) JValue {
 	n.StartPos = startPos
 	n.EndPos = endPos
 
 	return n
 }
 
-func (n *JNumber) SetJContext(context *common.JContext) *JNumber {
+func (n *JNumber) SetJContext(context *common.JContext) JValue {
 	n.Context = context
 
 	return n
 }
 
-func (n *JNumber) AddTo(other *JNumber) (*JNumber, error) {
-	var resNumber *JNumber
+func (n *JNumber) Copy() JValue {
+	return NewJNumber(n.Value)
+}
 
-	switch otherValue := other.Value.(type) {
+func (n *JNumber) AddTo(other JValue) (JValue, error) {
+	var resNumber *JNumber
+	otherNumber, ok := other.(*JNumber)
+	if !ok {
+		return nil, createNumberTypeError(other, "add")
+	}
+
+	switch otherValue := otherNumber.Value.(type) {
 	case int:
 		if num, ok := n.Value.(int); ok {
 			resNumber = NewJNumber(num + otherValue)
@@ -52,22 +59,20 @@ func (n *JNumber) AddTo(other *JNumber) (*JNumber, error) {
 			resNumber = NewJNumber(n.Value.(float64) + otherValue)
 		}
 	default:
-		return nil, errors.Wrap(&common.JNumberTypeError{
-			JError: &common.JError{
-				StartPos: other.StartPos,
-				EndPos:   other.EndPos,
-			},
-			Number: nil,
-		}, "failed to add")
+		return nil, createNumberTypeError(other, "add")
 	}
 
 	return resNumber.SetJContext(n.Context), nil
 }
 
-func (n *JNumber) SubBy(other *JNumber) (*JNumber, error) {
+func (n *JNumber) SubBy(other JValue) (JValue, error) {
 	var resNumber *JNumber
+	otherNumber, ok := other.(*JNumber)
+	if !ok {
+		return nil, createNumberTypeError(other, "sub")
+	}
 
-	switch otherValue := other.Value.(type) {
+	switch otherValue := otherNumber.Value.(type) {
 	case int:
 		if num, ok := n.Value.(int); ok {
 			resNumber = NewJNumber(num - otherValue)
@@ -81,22 +86,20 @@ func (n *JNumber) SubBy(other *JNumber) (*JNumber, error) {
 			resNumber = NewJNumber(n.Value.(float64) - otherValue)
 		}
 	default:
-		return nil, errors.Wrap(&common.JNumberTypeError{
-			JError: &common.JError{
-				StartPos: other.StartPos,
-				EndPos:   other.EndPos,
-			},
-			Number: nil,
-		}, "failed to sub")
+		return nil, createNumberTypeError(other, "sub")
 	}
 
 	return resNumber.SetJContext(n.Context), nil
 }
 
-func (n *JNumber) MulBy(other *JNumber) (*JNumber, error) {
+func (n *JNumber) MulBy(other JValue) (JValue, error) {
 	var resNumber *JNumber
+	otherNumber, ok := other.(*JNumber)
+	if !ok {
+		return nil, createNumberTypeError(other, "mul")
+	}
 
-	switch otherValue := other.Value.(type) {
+	switch otherValue := otherNumber.Value.(type) {
 	case int:
 		if num, ok := n.Value.(int); ok {
 			resNumber = NewJNumber(num * otherValue)
@@ -110,28 +113,26 @@ func (n *JNumber) MulBy(other *JNumber) (*JNumber, error) {
 			resNumber = NewJNumber(n.Value.(float64) * otherValue)
 		}
 	default:
-		return nil, errors.Wrap(&common.JNumberTypeError{
-			JError: &common.JError{
-				StartPos: other.StartPos,
-				EndPos:   other.EndPos,
-			},
-			Number: nil,
-		}, "failed to mul")
+		return nil, createNumberTypeError(other, "mul")
 	}
 
 	return resNumber.SetJContext(n.Context), nil
 }
 
-func (n *JNumber) DivBy(other *JNumber) (*JNumber, error) {
+func (n *JNumber) DivBy(other JValue) (JValue, error) {
 	var resNumber *JNumber
+	otherNumber, ok := other.(*JNumber)
+	if !ok {
+		return nil, createNumberTypeError(other, "div")
+	}
 
-	switch otherValue := other.Value.(type) {
+	switch otherValue := otherNumber.Value.(type) {
 	case int:
 		if otherValue == 0 {
 			return nil, errors.Wrap(&common.JRunTimeError{
 				JError: &common.JError{
-					StartPos: other.StartPos,
-					EndPos:   other.EndPos,
+					StartPos: otherNumber.StartPos,
+					EndPos:   otherNumber.EndPos,
 				},
 				Context: n.Context,
 				Details: "Division by zero",
@@ -147,8 +148,8 @@ func (n *JNumber) DivBy(other *JNumber) (*JNumber, error) {
 		if otherValue == 0.0 {
 			return nil, errors.Wrap(&common.JRunTimeError{
 				JError: &common.JError{
-					StartPos: other.StartPos,
-					EndPos:   other.EndPos,
+					StartPos: otherNumber.StartPos,
+					EndPos:   otherNumber.EndPos,
 				},
 				Context: n.Context,
 				Details: "Division by zero",
@@ -161,22 +162,20 @@ func (n *JNumber) DivBy(other *JNumber) (*JNumber, error) {
 			resNumber = NewJNumber(n.Value.(float64) / otherValue)
 		}
 	default:
-		return nil, errors.Wrap(&common.JNumberTypeError{
-			JError: &common.JError{
-				StartPos: other.StartPos,
-				EndPos:   other.EndPos,
-			},
-			Number: nil,
-		}, "failed to div")
+		return nil, createNumberTypeError(other, "div")
 	}
 
 	return resNumber.SetJContext(n.Context), nil
 }
 
-func (n *JNumber) PowBy(other *JNumber) (*JNumber, error) {
+func (n *JNumber) PowBy(other JValue) (JValue, error) {
 	var resNumber *JNumber
+	otherNumber, ok := other.(*JNumber)
+	if !ok {
+		return nil, createNumberTypeError(other, "pow")
+	}
 
-	switch otherValue := other.Value.(type) {
+	switch otherValue := otherNumber.Value.(type) {
 	case int:
 		if num, ok := n.Value.(int); ok {
 			resNumber = NewJNumber(math.Pow(float64(num), float64(otherValue)))
@@ -190,22 +189,20 @@ func (n *JNumber) PowBy(other *JNumber) (*JNumber, error) {
 			resNumber = NewJNumber(math.Pow(n.Value.(float64), otherValue))
 		}
 	default:
-		return nil, errors.Wrap(&common.JNumberTypeError{
-			JError: &common.JError{
-				StartPos: other.StartPos,
-				EndPos:   other.EndPos,
-			},
-			Number: nil,
-		}, "failed to pow")
+		return nil, createNumberTypeError(other, "pow")
 	}
 
 	return resNumber.SetJContext(n.Context), nil
 }
 
-func (n *JNumber) EqualTo(other *JNumber) (*JNumber, error) {
+func (n *JNumber) EqualTo(other JValue) (JValue, error) {
 	var res bool
+	otherNumber, ok := other.(*JNumber)
+	if !ok {
+		return nil, createNumberTypeError(other, "compare equal")
+	}
 
-	switch otherValue := other.Value.(type) {
+	switch otherValue := otherNumber.Value.(type) {
 	case int:
 		if num, ok := n.Value.(int); ok {
 			res = num == otherValue
@@ -219,22 +216,20 @@ func (n *JNumber) EqualTo(other *JNumber) (*JNumber, error) {
 			res = n.Value.(float64) == otherValue
 		}
 	default:
-		return nil, errors.Wrap(&common.JNumberTypeError{
-			JError: &common.JError{
-				StartPos: other.StartPos,
-				EndPos:   other.EndPos,
-			},
-			Number: nil,
-		}, "failed to compare equal")
+		return nil, createNumberTypeError(other, "compare equal")
 	}
 
 	return NewJNumber(boolToNumber(res)).SetJContext(n.Context), nil
 }
 
-func (n *JNumber) NotEqualTo(other *JNumber) (*JNumber, error) {
+func (n *JNumber) NotEqualTo(other JValue) (JValue, error) {
 	var res bool
+	otherNumber, ok := other.(*JNumber)
+	if !ok {
+		return nil, createNumberTypeError(other, "compare not equal")
+	}
 
-	switch otherValue := other.Value.(type) {
+	switch otherValue := otherNumber.Value.(type) {
 	case int:
 		if num, ok := n.Value.(int); ok {
 			res = num != otherValue
@@ -248,22 +243,20 @@ func (n *JNumber) NotEqualTo(other *JNumber) (*JNumber, error) {
 			res = n.Value.(float64) != otherValue
 		}
 	default:
-		return nil, errors.Wrap(&common.JNumberTypeError{
-			JError: &common.JError{
-				StartPos: other.StartPos,
-				EndPos:   other.EndPos,
-			},
-			Number: nil,
-		}, "failed to compare not equal")
+		return nil, createNumberTypeError(other, "compare not equal")
 	}
 
 	return NewJNumber(boolToNumber(res)).SetJContext(n.Context), nil
 }
 
-func (n *JNumber) LessThen(other *JNumber) (*JNumber, error) {
+func (n *JNumber) LessThan(other JValue) (JValue, error) {
 	var res bool
+	otherNumber, ok := other.(*JNumber)
+	if !ok {
+		return nil, createNumberTypeError(other, "compare less than")
+	}
 
-	switch otherValue := other.Value.(type) {
+	switch otherValue := otherNumber.Value.(type) {
 	case int:
 		if num, ok := n.Value.(int); ok {
 			res = num < otherValue
@@ -277,22 +270,20 @@ func (n *JNumber) LessThen(other *JNumber) (*JNumber, error) {
 			res = n.Value.(float64) < otherValue
 		}
 	default:
-		return nil, errors.Wrap(&common.JNumberTypeError{
-			JError: &common.JError{
-				StartPos: other.StartPos,
-				EndPos:   other.EndPos,
-			},
-			Number: nil,
-		}, "failed to compare less then")
+		return nil, createNumberTypeError(other, "compare less than")
 	}
 
 	return NewJNumber(boolToNumber(res)).SetJContext(n.Context), nil
 }
 
-func (n *JNumber) LessThenOrEqualTo(other *JNumber) (*JNumber, error) {
+func (n *JNumber) LessThanOrEqualTo(other JValue) (JValue, error) {
 	var res bool
+	otherNumber, ok := other.(*JNumber)
+	if !ok {
+		return nil, createNumberTypeError(other, "compare less than or equal")
+	}
 
-	switch otherValue := other.Value.(type) {
+	switch otherValue := otherNumber.Value.(type) {
 	case int:
 		if num, ok := n.Value.(int); ok {
 			res = num <= otherValue
@@ -306,22 +297,20 @@ func (n *JNumber) LessThenOrEqualTo(other *JNumber) (*JNumber, error) {
 			res = n.Value.(float64) <= otherValue
 		}
 	default:
-		return nil, errors.Wrap(&common.JNumberTypeError{
-			JError: &common.JError{
-				StartPos: other.StartPos,
-				EndPos:   other.EndPos,
-			},
-			Number: nil,
-		}, "failed to compare less then or equal")
+		return nil, createNumberTypeError(other, "compare less than or equal")
 	}
 
 	return NewJNumber(boolToNumber(res)).SetJContext(n.Context), nil
 }
 
-func (n *JNumber) GreaterThen(other *JNumber) (*JNumber, error) {
+func (n *JNumber) GreaterThan(other JValue) (JValue, error) {
 	var res bool
+	otherNumber, ok := other.(*JNumber)
+	if !ok {
+		return nil, createNumberTypeError(other, "compare greater than")
+	}
 
-	switch otherValue := other.Value.(type) {
+	switch otherValue := otherNumber.Value.(type) {
 	case int:
 		if num, ok := n.Value.(int); ok {
 			res = num > otherValue
@@ -335,22 +324,20 @@ func (n *JNumber) GreaterThen(other *JNumber) (*JNumber, error) {
 			res = n.Value.(float64) > otherValue
 		}
 	default:
-		return nil, errors.Wrap(&common.JNumberTypeError{
-			JError: &common.JError{
-				StartPos: other.StartPos,
-				EndPos:   other.EndPos,
-			},
-			Number: nil,
-		}, "failed to compare greater then")
+		return nil, createNumberTypeError(other, "compare greater than")
 	}
 
 	return NewJNumber(boolToNumber(res)).SetJContext(n.Context), nil
 }
 
-func (n *JNumber) GreaterThenOrEqualTo(other *JNumber) (*JNumber, error) {
+func (n *JNumber) GreaterThanOrEqualTo(other JValue) (JValue, error) {
 	var res bool
+	otherNumber, ok := other.(*JNumber)
+	if !ok {
+		return nil, createNumberTypeError(other, "compare greater than or equal")
+	}
 
-	switch otherValue := other.Value.(type) {
+	switch otherValue := otherNumber.Value.(type) {
 	case int:
 		if num, ok := n.Value.(int); ok {
 			res = num >= otherValue
@@ -364,40 +351,44 @@ func (n *JNumber) GreaterThenOrEqualTo(other *JNumber) (*JNumber, error) {
 			res = n.Value.(float64) >= otherValue
 		}
 	default:
-		return nil, errors.Wrap(&common.JNumberTypeError{
-			JError: &common.JError{
-				StartPos: other.StartPos,
-				EndPos:   other.EndPos,
-			},
-			Number: nil,
-		}, "failed to compare greater then or equal")
+		return nil, createNumberTypeError(other, "compare greater than or equal")
 	}
 
-	return NewJNumber(boolToNumber(res)).SetJContext(n.Context), nil
+	return NewJNumber(boolToNumber(res)).SetJContext(n.Context).(*JNumber), nil
 }
 
-func (n *JNumber) AndBy(other *JNumber) (*JNumber, error) {
+func (n *JNumber) AndBy(other JValue) (JValue, error) {
+	otherNumber, ok := other.(*JNumber)
+	if !ok {
+		return nil, createNumberTypeError(other, "and")
+	}
+
 	// short-circuit evaluation
 	if numberToBool(n.Value) {
-		return NewJNumber(other.Value).SetJContext(n.Context), nil
+		return NewJNumber(otherNumber.Value).SetJContext(n.Context).(*JNumber), nil
 	} else {
-		return NewJNumber(n.Value).SetJContext(n.Context), nil
+		return NewJNumber(n.Value).SetJContext(n.Context).(*JNumber), nil
 	}
 }
 
-func (n *JNumber) OrBy(other *JNumber) (*JNumber, error) {
+func (n *JNumber) OrBy(other JValue) (JValue, error) {
+	otherNumber, ok := other.(*JNumber)
+	if !ok {
+		return nil, createNumberTypeError(other, "or")
+	}
+
 	// short-circuit evaluation
 	if numberToBool(n.Value) {
-		return NewJNumber(n.Value).SetJContext(n.Context), nil
+		return NewJNumber(n.Value).SetJContext(n.Context).(*JNumber), nil
 	} else {
-		return NewJNumber(other.Value).SetJContext(n.Context), nil
+		return NewJNumber(otherNumber.Value).SetJContext(n.Context).(*JNumber), nil
 	}
 }
 
-func (n *JNumber) Not() (*JNumber, error) {
+func (n *JNumber) Not() (JValue, error) {
 	res := !numberToBool(n.Value)
 
-	return NewJNumber(boolToNumber(res)).SetJContext(n.Context), nil
+	return NewJNumber(boolToNumber(res)).SetJContext(n.Context).(*JNumber), nil
 }
 
 func (n *JNumber) IsTrue() bool {
@@ -418,4 +409,14 @@ func numberToBool(n interface{}) bool {
 	}
 
 	return n.(float64) != 0
+}
+
+func createNumberTypeError(number JValue, operation string) error {
+	return errors.Wrap(&common.JNumberTypeError{
+		JError: &common.JError{
+			StartPos: number.GetStartPos(),
+			EndPos:   number.GetEndPos(),
+		},
+		Number: nil,
+	}, "failed to "+operation)
 }
