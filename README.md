@@ -12,7 +12,7 @@ The plan supports the following functions:
 - [x] Variable
 - [x] Judgment Branch Statement (IF ... THEN ... ELIF ... ELSE ...)
 - [x] Loop Statement (FOR, WHILE)
-- [ ] Function
+- [x] Function
 - [ ] String
 - [ ] List
 - [ ] Map
