@@ -366,6 +366,16 @@ func (p *JParser) atom() (JNode, error) {
 				EndPos:   currentToken.EndPos,
 			},
 		}, nil
+	case token.STRING:
+		p.advance()
+
+		return &JStringNode{
+			JBaseNode: &JBaseNode{
+				Token:    currentToken,
+				StartPos: currentToken.StartPos,
+				EndPos:   currentToken.EndPos,
+			},
+		}, nil
 	case token.IDENTIFIER:
 		p.advance()
 

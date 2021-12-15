@@ -14,6 +14,7 @@ type JTokenType string
 const (
 	INT        JTokenType = "INT"
 	FLOAT      JTokenType = "FLOAT"
+	STRING     JTokenType = "STRING"
 	IDENTIFIER JTokenType = "IDENTIFIER"
 	KEYWORD    JTokenType = "KEYWORD"
 	PLUS       JTokenType = "PLUS"   // +

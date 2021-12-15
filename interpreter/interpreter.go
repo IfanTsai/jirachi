@@ -57,6 +57,8 @@ func (i *JInterpreter) visit(node parser.JNode) (JValue, error) {
 	switch node.Type() {
 	case parser.Number:
 		return i.visitNumberNode(node.(*parser.JNumberNode))
+	case parser.String:
+		return i.visitStringNode(node.(*parser.JStringNode))
 	case parser.BinOp:
 		return i.visitBinOpNode(node.(*parser.JBinOpNode))
 	case parser.UnaryOp:
@@ -88,6 +90,10 @@ func (i *JInterpreter) visit(node parser.JNode) (JValue, error) {
 
 func (i *JInterpreter) visitNumberNode(node *parser.JNumberNode) (JValue, error) {
 	return NewJNumber(node.Token.Value).SetJPos(node.StartPos, node.EndPos).SetJContext(i.Context), nil
+}
+
+func (i *JInterpreter) visitStringNode(node *parser.JStringNode) (JValue, error) {
+	return NewJString(node.Token.Value).SetJPos(node.StartPos, node.EndPos).SetJContext(i.Context), nil
 }
 
 func (i *JInterpreter) visitVarAssignNode(node *parser.JVarAssignNode) (JValue, error) {

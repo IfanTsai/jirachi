@@ -15,7 +15,7 @@ power      : call ( POW factor )*
 
 call       : atom ( LPAREN ( expr ( COMMA expr )* )? RPAREN )?
 
-atom       : INT | FLOAT
+atom       : INT | FLOAT | STRING
            : IDENTIFIER                // variable access
            : LPAREN expr RPAREN
            : if-expr
