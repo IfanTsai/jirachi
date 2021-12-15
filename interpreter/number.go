@@ -417,6 +417,6 @@ func createNumberTypeError(number JValue, operation string) error {
 			StartPos: number.GetStartPos(),
 			EndPos:   number.GetEndPos(),
 		},
-		Number: nil,
+		Number: number,
 	}, "failed to "+operation)
 }

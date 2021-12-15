@@ -31,6 +31,18 @@ func (p *JPosition) Advance(text []byte) *JPosition {
 	return p
 }
 
+func (p *JPosition) Back(text []byte) *JPosition {
+	p.Index--
+	p.Col--
+
+	if text != nil && p.Index >= 0 && text[p.Index] == '\n' {
+		p.Ln--
+		p.Col = len(text) - 1
+	}
+
+	return p
+}
+
 func (p *JPosition) Copy() *JPosition {
 	return &JPosition{
 		Index:    p.Index,

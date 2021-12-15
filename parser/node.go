@@ -14,6 +14,7 @@ type JNodeType int
 const (
 	Base JNodeType = iota
 	Number
+	String
 	VarAssign
 	VarAccess
 	BinOp
@@ -72,6 +73,19 @@ func (n *JNumberNode) Type() JNodeType {
 
 func (n *JNumberNode) String() string {
 	return n.Token.String()
+}
+
+// JStringNode is string node structure of AST
+type JStringNode struct {
+	*JBaseNode
+}
+
+func (s *JStringNode) Type() JNodeType {
+	return String
+}
+
+func (s *JStringNode) String() string {
+	return "\"" + s.Token.String() + "\""
 }
 
 // JBinOpNode is binary operation node structure of AST

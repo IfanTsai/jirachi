@@ -3,6 +3,8 @@ package interpreter
 import (
 	"fmt"
 
+	"github.com/pkg/errors"
+
 	"github.com/IfanTsai/jirachi/common"
 )
 
@@ -40,6 +42,19 @@ type JBaseValue struct {
 	Context  *common.JContext
 }
 
+func (v *JBaseValue) SetJPos(startPos, endPos *common.JPosition) JValue {
+	v.StartPos = startPos
+	v.EndPos = endPos
+
+	return v
+}
+
+func (v *JBaseValue) SetJContext(context *common.JContext) JValue {
+	v.Context = context
+
+	return v
+}
+
 func (v *JBaseValue) String() string {
 	return fmt.Sprintf("%v", v.Value)
 }
@@ -65,65 +80,75 @@ func (v *JBaseValue) Copy() JValue {
 }
 
 func (v *JBaseValue) AddTo(other JValue) (JValue, error) {
-	panic("implement me")
+	return nil, v.createIllegalOperationError(other, "add")
 }
 
 func (v *JBaseValue) SubBy(other JValue) (JValue, error) {
-	panic("implement me")
+	return nil, v.createIllegalOperationError(other, "sub")
 }
 
 func (v *JBaseValue) MulBy(other JValue) (JValue, error) {
-	panic("implement me")
+	return nil, v.createIllegalOperationError(other, "mul")
 }
 
 func (v *JBaseValue) DivBy(other JValue) (JValue, error) {
-	panic("implement me")
+	return nil, v.createIllegalOperationError(other, "div")
 }
 
 func (v *JBaseValue) PowBy(other JValue) (JValue, error) {
-	panic("implement me")
+	return nil, v.createIllegalOperationError(other, "pow")
 }
 
 func (v *JBaseValue) EqualTo(other JValue) (JValue, error) {
-	panic("implement me")
+	return nil, v.createIllegalOperationError(other, "equal")
 }
 
 func (v *JBaseValue) NotEqualTo(other JValue) (JValue, error) {
-	panic("implement me")
+	return nil, v.createIllegalOperationError(other, "not equal")
 }
 
 func (v *JBaseValue) LessThan(other JValue) (JValue, error) {
-	panic("implement me")
+	return nil, v.createIllegalOperationError(other, "less than")
 }
 
 func (v *JBaseValue) LessThanOrEqualTo(other JValue) (JValue, error) {
-	panic("implement me")
+	return nil, v.createIllegalOperationError(other, "less than or equal")
 }
 
 func (v *JBaseValue) GreaterThan(other JValue) (JValue, error) {
-	panic("implement me")
+	return nil, v.createIllegalOperationError(other, "greater than")
 }
 
 func (v *JBaseValue) GreaterThanOrEqualTo(other JValue) (JValue, error) {
-	panic("implement me")
+	return nil, v.createIllegalOperationError(other, "greater than or equal")
 }
 
 func (v *JBaseValue) AndBy(other JValue) (JValue, error) {
-	panic("implement me")
+	return nil, v.createIllegalOperationError(other, "and")
 }
 
 func (v *JBaseValue) OrBy(other JValue) (JValue, error) {
-	panic("implement me")
+	return nil, v.createIllegalOperationError(other, "or")
 }
 
 func (v *JBaseValue) Not() (JValue, error) {
-	panic("implement me")
+	return nil, v.createIllegalOperationError(v, "not")
 }
 
 func (v *JBaseValue) IsTrue() bool {
-	panic("implement me")
+	return false
 }
 
 func (v *JBaseValue) Execute(args []JValue) (JValue, error) {
-	panic("implement me")
+	return nil, v.createIllegalOperationError(v, "execute")
+}
+
+func (v *JBaseValue) createIllegalOperationError(value JValue, operation string) error {
+	return errors.Wrap(&common.JRunTimeError{
+		JError: &common.JError{
+			StartPos: v.GetStartPos(),
+			EndPos:   value.GetEndPos(),
+		},
+		Details: "Illegal operation",
+	}, "failed to "+operation)
 }

@@ -1,6 +1,7 @@
 package lexer
 
 import (
+	"fmt"
 	"strconv"
 	"strings"
 
@@ -10,6 +11,11 @@ import (
 
 	"github.com/pkg/errors"
 )
+
+var escapeChars = map[byte]byte{
+	'n': '\n',
+	't': '\t',
+}
 
 type JLexer struct {
 	Text []byte
@@ -42,6 +48,12 @@ func (l *JLexer) MakeTokens() ([]*token.JToken, error) {
 			tokens = append(tokens, tok)
 		case isLetters(char):
 			tok, advanceAble = l.makeIdentifierToken()
+			tokens = append(tokens, tok)
+		case char == '"' || char == '\'':
+			tok, advanceAble, err = l.makeString()
+			if err != nil {
+				return nil, err
+			}
 			tokens = append(tokens, tok)
 		case char == '+':
 			tokens = append(tokens, token.NewJToken(token.PLUS, nil, l.Pos, l.Pos))
@@ -174,6 +186,53 @@ func (l *JLexer) makeIdentifierToken() (*token.JToken, bool) {
 	}
 
 	return token.NewJToken(token.IDENTIFIER, identifier, startPos, l.Pos), advanceAble
+}
+
+func (l *JLexer) makeString() (*token.JToken, bool, error) {
+	quote := l.getCurrentChar() // ' or "
+	strBuilder := strings.Builder{}
+	startPos := l.Pos.Copy()
+	isEscape := false
+	advanceAble := l.advance()
+
+	for advanceAble && (l.getCurrentChar() != quote || isEscape) {
+		if isEscape {
+			escapeChar, ok := escapeChars[l.getCurrentChar()]
+			if !ok {
+				escapeChar = l.getCurrentChar()
+			}
+			strBuilder.WriteByte(escapeChar)
+
+			isEscape = false
+		} else if l.getCurrentChar() == '\\' {
+			isEscape = true
+		} else {
+			strBuilder.WriteByte(l.getCurrentChar())
+		}
+
+		if !l.advance() {
+			advanceAble = false
+
+			break
+		}
+	}
+
+	if !advanceAble || l.getCurrentChar() != quote {
+		if !l.advance() {
+			fmt.Println(startPos.Index)
+			return nil, advanceAble, errors.Wrap(&common.JExpectedCharacterError{
+				JError: &common.JError{
+					StartPos: startPos,
+					EndPos:   startPos.Copy().Advance(l.Text),
+				},
+				ExpectedChar: quote,
+			}, "failed to make string token")
+		}
+	}
+
+	advanceAble = l.advance()
+
+	return token.NewJToken(token.STRING, strBuilder.String(), startPos, l.Pos), advanceAble, nil
 }
 
 func (l *JLexer) makeMinusOrArrowToken() (*token.JToken, bool) {
