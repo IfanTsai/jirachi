@@ -13,7 +13,7 @@ The plan supports the following functions:
 - [x] Judgment Branch Statement (IF ... THEN ... ELIF ... ELSE ...)
 - [x] Loop Statement (FOR, WHILE)
 - [x] Function
-- [ ] String
+- [x] String
 - [ ] List
 - [ ] Map
 - [ ] Built-in Functions

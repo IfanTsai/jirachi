@@ -227,6 +227,36 @@ func TestJInterpreter_Visit(t *testing.T) {
 			},
 		},
 		{
+			name: "OK17: string mul",
+			text: "str17 * 4",
+			preRun: func(t *testing.T) {
+				t.Helper()
+
+				assignVariable(t, "str17 = 'hello'")
+			},
+			checkResult: func(t *testing.T, number interpreter.JValue, err error) {
+				t.Helper()
+				require.NoError(t, err)
+				require.IsType(t, "", number.GetValue())
+				require.Equal(t, "hellohellohellohello", number.GetValue())
+			},
+		},
+		{
+			name: "OK18: string add",
+			text: "str18 + \" world\"",
+			preRun: func(t *testing.T) {
+				t.Helper()
+
+				assignVariable(t, "str18 = 'hello'")
+			},
+			checkResult: func(t *testing.T, number interpreter.JValue, err error) {
+				t.Helper()
+				require.NoError(t, err)
+				require.IsType(t, "", number.GetValue())
+				require.Equal(t, "hello world", number.GetValue())
+			},
+		},
+		{
 			name: "Division by zero integer number",
 			text: "13 / 0",
 			checkResult: func(t *testing.T, number interpreter.JValue, err error) {

@@ -57,6 +57,8 @@ func (i *JInterpreter) visit(node parser.JNode) (JValue, error) {
 	switch node.Type() {
 	case parser.Number:
 		return i.visitNumberNode(node.(*parser.JNumberNode))
+	case parser.String:
+		return i.visitStringNode(node.(*parser.JStringNode))
 	case parser.BinOp:
 		return i.visitBinOpNode(node.(*parser.JBinOpNode))
 	case parser.UnaryOp:
@@ -90,6 +92,10 @@ func (i *JInterpreter) visitNumberNode(node *parser.JNumberNode) (JValue, error)
 	return NewJNumber(node.Token.Value).SetJPos(node.StartPos, node.EndPos).SetJContext(i.Context), nil
 }
 
+func (i *JInterpreter) visitStringNode(node *parser.JStringNode) (JValue, error) {
+	return NewJString(node.Token.Value).SetJPos(node.StartPos, node.EndPos).SetJContext(i.Context), nil
+}
+
 func (i *JInterpreter) visitVarAssignNode(node *parser.JVarAssignNode) (JValue, error) {
 	varName := node.Token.Value
 
@@ -121,47 +127,47 @@ func (i *JInterpreter) visitVarAccessNode(node *parser.JVarAccessNode) (JValue, 
 }
 
 func (i *JInterpreter) visitBinOpNode(node *parser.JBinOpNode) (JValue, error) {
-	leftNumber, err := i.visit(node.LeftNode)
+	leftValue, err := i.visit(node.LeftNode)
 	if err != nil {
 		return nil, err
 	}
 
-	rightNumber, err := i.visit(node.RightNode)
+	rightValue, err := i.visit(node.RightNode)
 	if err != nil {
 		return nil, err
 	}
 
-	var resNumber JValue
+	var resValue JValue
 
 	switch node.Token.Type {
 	case token.PLUS:
-		resNumber, err = leftNumber.AddTo(rightNumber)
+		resValue, err = leftValue.AddTo(rightValue)
 	case token.MINUS:
-		resNumber, err = leftNumber.SubBy(rightNumber)
+		resValue, err = leftValue.SubBy(rightValue)
 	case token.MUL:
-		resNumber, err = leftNumber.MulBy(rightNumber)
+		resValue, err = leftValue.MulBy(rightValue)
 	case token.DIV:
-		resNumber, err = leftNumber.DivBy(rightNumber)
+		resValue, err = leftValue.DivBy(rightValue)
 	case token.POW:
-		resNumber, err = leftNumber.PowBy(rightNumber)
+		resValue, err = leftValue.PowBy(rightValue)
 	case token.EE:
-		resNumber, err = leftNumber.EqualTo(rightNumber)
+		resValue, err = leftValue.EqualTo(rightValue)
 	case token.NE:
-		resNumber, err = leftNumber.NotEqualTo(rightNumber)
+		resValue, err = leftValue.NotEqualTo(rightValue)
 	case token.LT:
-		resNumber, err = leftNumber.LessThan(rightNumber)
+		resValue, err = leftValue.LessThan(rightValue)
 	case token.LTE:
-		resNumber, err = leftNumber.LessThanOrEqualTo(rightNumber)
+		resValue, err = leftValue.LessThanOrEqualTo(rightValue)
 	case token.GT:
-		resNumber, err = leftNumber.GreaterThan(rightNumber)
+		resValue, err = leftValue.GreaterThan(rightValue)
 	case token.GTE:
-		resNumber, err = leftNumber.GreaterThanOrEqualTo(rightNumber)
+		resValue, err = leftValue.GreaterThanOrEqualTo(rightValue)
 	case token.KEYWORD:
 		switch node.Token.Value {
 		case token.AND:
-			resNumber, err = leftNumber.AndBy(rightNumber)
+			resValue, err = leftValue.AndBy(rightValue)
 		case token.OR:
-			resNumber, err = leftNumber.OrBy(rightNumber)
+			resValue, err = leftValue.OrBy(rightValue)
 		}
 	default:
 		return nil, errors.Wrap(&common.JInvalidSyntaxError{
@@ -177,7 +183,7 @@ func (i *JInterpreter) visitBinOpNode(node *parser.JBinOpNode) (JValue, error) {
 		return nil, errors.WithMessage(err, "failed to visit bin op node")
 	}
 
-	return resNumber.SetJPos(node.StartPos, node.EndPos), nil
+	return resValue.SetJPos(node.StartPos, node.EndPos), nil
 }
 
 func (i *JInterpreter) visitUnaryOpNode(node *parser.JUnaryOpNode) (JValue, error) {
