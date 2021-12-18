@@ -48,7 +48,7 @@ func TestJLexer_MakeTokens(t *testing.T) {
 
 				resStr := []string{
 					"INT:1", "PLUS", "LPAREN",
-					"IDENTIFIER:\"a\"", "EQ", "INT:2",
+					"IDENTIFIER:a", "EQ", "INT:2",
 					"RPAREN", "EOF",
 				}
 				require.Len(t, tokens, len(resStr))

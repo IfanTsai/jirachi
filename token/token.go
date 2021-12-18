@@ -17,22 +17,24 @@ const (
 	STRING     JTokenType = "STRING"
 	IDENTIFIER JTokenType = "IDENTIFIER"
 	KEYWORD    JTokenType = "KEYWORD"
-	PLUS       JTokenType = "PLUS"   // +
-	MINUS      JTokenType = "MINUS"  // -
-	MUL        JTokenType = "MUL"    // *
-	DIV        JTokenType = "DIV"    // /
-	POW        JTokenType = "POW"    // ^
-	EQ         JTokenType = "EQ"     // =
-	LPAREN     JTokenType = "LPAREN" // (
-	RPAREN     JTokenType = "RPAREN" // )
-	EE         JTokenType = "EE"     // ==
-	NE         JTokenType = "NE"     // !=
-	LT         JTokenType = "LT"     // <
-	GT         JTokenType = "GT"     // >
-	LTE        JTokenType = "LTE"    // <=
-	GTE        JTokenType = "GTE"    // >=
-	COMMA      JTokenType = "COMMA"  // ,
-	ARROW      JTokenType = "ARROW"  // ->
+	PLUS       JTokenType = "PLUS"    // +
+	MINUS      JTokenType = "MINUS"   // -
+	MUL        JTokenType = "MUL"     // *
+	DIV        JTokenType = "DIV"     // /
+	POW        JTokenType = "POW"     // ^
+	EQ         JTokenType = "EQ"      // =
+	LPAREN     JTokenType = "LPAREN"  // (
+	RPAREN     JTokenType = "RPAREN"  // )
+	LSQUARE    JTokenType = "LSQUARE" // [
+	RSQUARE    JTokenType = "RSQUARE" // ]
+	EE         JTokenType = "EE"      // ==
+	NE         JTokenType = "NE"      // !=
+	LT         JTokenType = "LT"      // <
+	GT         JTokenType = "GT"      // >
+	LTE        JTokenType = "LTE"     // <=
+	GTE        JTokenType = "GTE"     // >=
+	COMMA      JTokenType = "COMMA"   // ,
+	ARROW      JTokenType = "ARROW"   // ->
 	EOF        JTokenType = "EOF"
 )
 
@@ -106,6 +108,8 @@ func (t *JToken) ValueToString() string {
 		return strconv.FormatFloat(value, 'f', -1, 64)
 	case int:
 		return strconv.Itoa(value)
+	case string:
+		return value
 	default:
 		newValue, _ := json.Marshal(value)
 		return string(newValue)

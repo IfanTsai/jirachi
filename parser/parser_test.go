@@ -40,7 +40,7 @@ func TestJParser_Parse(t *testing.T) {
 				require.NoError(t, err)
 				require.NotEmpty(t, node, err)
 
-				resStr := "(INT:1 PLUS (IDENTIFIER:\"a\" INT:2))"
+				resStr := "(INT:1 PLUS (IDENTIFIER:a = INT:2))"
 				require.Equal(t, resStr, node.String())
 
 			},
@@ -52,7 +52,7 @@ func TestJParser_Parse(t *testing.T) {
 				t.Helper()
 				require.Error(t, err)
 				require.IsType(t, &common.JInvalidSyntaxError{}, errors.Cause(err))
-				require.Contains(t, err.Error(), "Invalid Syntax: Expected int, float, identifier, '+', '-', '(' or 'NOT'")
+				require.Contains(t, err.Error(), "Invalid Syntax")
 				require.Nil(t, node)
 			},
 		},
@@ -63,7 +63,7 @@ func TestJParser_Parse(t *testing.T) {
 				t.Helper()
 				require.Error(t, err)
 				require.IsType(t, &common.JInvalidSyntaxError{}, errors.Cause(err))
-				require.Contains(t, err.Error(), "Invalid Syntax: Expected int, float, identifier, '+', '-', '(' or 'NOT'")
+				require.Contains(t, err.Error(), "Invalid Syntax")
 				require.Nil(t, node)
 			},
 		},
@@ -85,7 +85,7 @@ func TestJParser_Parse(t *testing.T) {
 				t.Helper()
 				require.Error(t, err)
 				require.IsType(t, &common.JInvalidSyntaxError{}, errors.Cause(err))
-				require.Contains(t, err.Error(), "Invalid Syntax: Expected '+', '-', '*', '/' or '^'")
+				require.Contains(t, err.Error(), "Invalid Syntax")
 				require.Nil(t, node)
 			},
 		},
@@ -96,7 +96,7 @@ func TestJParser_Parse(t *testing.T) {
 				t.Helper()
 				require.Error(t, err)
 				require.IsType(t, &common.JInvalidSyntaxError{}, errors.Cause(err))
-				require.Contains(t, err.Error(), "Invalid Syntax: Expected '+', '-', '*', '/' or '^'")
+				require.Contains(t, err.Error(), "Invalid Syntax")
 				require.Nil(t, node)
 			},
 		},

@@ -14,7 +14,7 @@ The plan supports the following functions:
 - [x] Loop Statement (FOR, WHILE)
 - [x] Function
 - [x] String
-- [ ] List
+- [x] List
 - [ ] Map
 - [ ] Built-in Functions
 - [ ] Branch Control Statement (BREAK, CONTINUE, RETURN)
@@ -28,3 +28,7 @@ The plan supports the following functions:
 Example:
 
 <img src="https://img.caiyifan.cn/typora_picgo/image-20211204175744657.png" alt="image-20211204175744657" style="zoom:80%;" /> 
+
+
+
+<img src="https://img.caiyifan.cn/typora_picgo/image-20211218194626852.png" alt="image-20211218194626852" style="zoom:80%;" />
