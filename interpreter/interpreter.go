@@ -59,6 +59,8 @@ func (i *JInterpreter) visit(node parser.JNode) (JValue, error) {
 		return i.visitNumberNode(node.(*parser.JNumberNode))
 	case parser.String:
 		return i.visitStringNode(node.(*parser.JStringNode))
+	case parser.List:
+		return i.visitListNode(node.(*parser.JListNode))
 	case parser.BinOp:
 		return i.visitBinOpNode(node.(*parser.JBinOpNode))
 	case parser.UnaryOp:
@@ -77,6 +79,8 @@ func (i *JInterpreter) visit(node parser.JNode) (JValue, error) {
 		return i.visitFunDefNode(node.(*parser.JFuncDefNode))
 	case parser.CallExpr:
 		return i.visitCallExprNode(node.(*parser.JCallExprNode))
+	case parser.IndexExpr:
+		return i.visitIndexExprNode(node.(*parser.JIndexExprNode))
 	default:
 		return nil, errors.Wrap(&common.JInvalidSyntaxError{
 			JError: &common.JError{
@@ -94,6 +98,19 @@ func (i *JInterpreter) visitNumberNode(node *parser.JNumberNode) (JValue, error)
 
 func (i *JInterpreter) visitStringNode(node *parser.JStringNode) (JValue, error) {
 	return NewJString(node.Token.Value).SetJPos(node.StartPos, node.EndPos).SetJContext(i.Context), nil
+}
+
+func (i *JInterpreter) visitListNode(node *parser.JListNode) (JValue, error) {
+	elementValues := make([]JValue, len(node.ElementNodes))
+	for index := range node.ElementNodes {
+		value, err := i.visit(node.ElementNodes[index])
+		if err != nil {
+			return nil, err
+		}
+		elementValues[index] = value
+	}
+
+	return NewJList(elementValues).SetJPos(node.StartPos, node.EndPos).SetJContext(i.Context), nil
 }
 
 func (i *JInterpreter) visitVarAssignNode(node *parser.JVarAssignNode) (JValue, error) {
@@ -240,6 +257,7 @@ func (i *JInterpreter) visitIfExprNode(node *parser.JIfExprNode) (JValue, error)
 
 func (i *JInterpreter) visitWhileExprNode(node *parser.JWhileExprNode) (JValue, error) {
 	var res JValue
+	var resElementValues []JValue
 
 	for {
 		condition, err := i.visit(node.ConditionNode)
@@ -255,13 +273,15 @@ func (i *JInterpreter) visitWhileExprNode(node *parser.JWhileExprNode) (JValue, 
 		if err != nil {
 			return nil, err
 		}
+
+		resElementValues = append(resElementValues, res)
 	}
 
 	if res == nil {
 		return NewJNumber(nil), nil
 	}
 
-	return res, nil
+	return NewJList(resElementValues).SetJPos(node.StartPos, node.EndPos).SetJContext(i.Context), nil
 }
 
 func (i *JInterpreter) visitForExprNode(node *parser.JForExprNode) (JValue, error) {
@@ -286,6 +306,7 @@ func (i *JInterpreter) visitForExprNode(node *parser.JForExprNode) (JValue, erro
 	}
 
 	isFloat := false
+	var resElementValues []JValue
 
 	if _, ok := startNumber.GetValue().(float64); ok {
 		isFloat = true
@@ -328,6 +349,8 @@ func (i *JInterpreter) visitForExprNode(node *parser.JForExprNode) (JValue, erro
 			if err != nil {
 				return nil, err
 			}
+
+			resElementValues = append(resElementValues, res)
 		}
 	} else {
 		start := int(reflect.ValueOf(startNumber.GetValue()).Int())
@@ -345,6 +368,8 @@ func (i *JInterpreter) visitForExprNode(node *parser.JForExprNode) (JValue, erro
 			if err != nil {
 				return nil, err
 			}
+
+			resElementValues = append(resElementValues, res)
 		}
 	}
 
@@ -352,7 +377,7 @@ func (i *JInterpreter) visitForExprNode(node *parser.JForExprNode) (JValue, erro
 		return NewJNumber(nil), nil
 	}
 
-	return res, nil
+	return NewJList(resElementValues).SetJPos(node.StartPos, node.EndPos).SetJContext(i.Context), nil
 }
 
 func (i *JInterpreter) visitFunDefNode(node *parser.JFuncDefNode) (JValue, error) {
@@ -408,4 +433,23 @@ func (i *JInterpreter) visitCallExprNode(node *parser.JCallExprNode) (JValue, er
 	}
 
 	return returnValue, nil
+}
+
+func (i *JInterpreter) visitIndexExprNode(node *parser.JIndexExprNode) (JValue, error) {
+	indexNodeValue, err := i.visit(node.IndexNode)
+	if err != nil {
+		return nil, err
+	}
+
+	indexExprValue, err := i.visit(node.IndexExpr)
+	if err != nil {
+		return nil, err
+	}
+
+	resValue, err := indexNodeValue.Index(indexExprValue)
+	if err != nil {
+		return nil, errors.WithMessage(err, "failed to visit index expression node")
+	}
+
+	return resValue, nil
 }

@@ -33,6 +33,7 @@ type JValue interface {
 	Not() (JValue, error)
 	IsTrue() bool
 	Execute(args []JValue) (JValue, error)
+	Index(arg JValue) (JValue, error)
 }
 
 type JBaseValue struct {
@@ -141,6 +142,10 @@ func (v *JBaseValue) IsTrue() bool {
 
 func (v *JBaseValue) Execute(args []JValue) (JValue, error) {
 	return nil, v.createIllegalOperationError(v, "execute")
+}
+
+func (v *JBaseValue) Index(arg JValue) (JValue, error) {
+	return nil, v.createIllegalOperationError(v, "index")
 }
 
 func (v *JBaseValue) createIllegalOperationError(value JValue, operation string) error {

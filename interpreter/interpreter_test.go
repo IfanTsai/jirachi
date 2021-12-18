@@ -18,7 +18,7 @@ func TestJInterpreter_Visit(t *testing.T) {
 		name        string
 		text        string
 		preRun      func(t *testing.T)
-		checkResult func(t *testing.T, number interpreter.JValue, err error)
+		checkResult func(t *testing.T, value interpreter.JValue, err error)
 	}{
 		{
 			name: "OK1",
@@ -174,11 +174,15 @@ func TestJInterpreter_Visit(t *testing.T) {
 
 				assignVariable(t, "res13 = 1")
 			},
-			checkResult: func(t *testing.T, number interpreter.JValue, err error) {
+			checkResult: func(t *testing.T, value interpreter.JValue, err error) {
 				t.Helper()
 				require.NoError(t, err)
-				require.IsType(t, 0, number.GetValue())
-				require.Equal(t, 120, number.GetValue())
+				require.IsType(t, interpreter.NewJList(nil), value)
+
+				elementValues := value.(*interpreter.JList).ElementValues
+				resValue := elementValues[len(elementValues)-1]
+				require.IsType(t, 0, resValue.GetValue())
+				require.Equal(t, 120, resValue.GetValue())
 			},
 		},
 		{
@@ -189,11 +193,15 @@ func TestJInterpreter_Visit(t *testing.T) {
 
 				assignVariable(t, "res14 = 1")
 			},
-			checkResult: func(t *testing.T, number interpreter.JValue, err error) {
+			checkResult: func(t *testing.T, value interpreter.JValue, err error) {
 				t.Helper()
 				require.NoError(t, err)
-				require.IsType(t, 0, number.GetValue())
-				require.Equal(t, 120, number.GetValue())
+				require.IsType(t, interpreter.NewJList(nil), value)
+
+				elementValues := value.(*interpreter.JList).ElementValues
+				resValue := elementValues[len(elementValues)-1]
+				require.IsType(t, 0, resValue.GetValue())
+				require.Equal(t, 120, resValue.GetValue())
 			},
 		},
 		{
@@ -204,11 +212,15 @@ func TestJInterpreter_Visit(t *testing.T) {
 
 				assignVariable(t, "res15 = 0")
 			},
-			checkResult: func(t *testing.T, number interpreter.JValue, err error) {
+			checkResult: func(t *testing.T, value interpreter.JValue, err error) {
 				t.Helper()
 				require.NoError(t, err)
-				require.IsType(t, 0, number.GetValue())
-				require.Equal(t, 10000, number.GetValue())
+				require.IsType(t, interpreter.NewJList(nil), value)
+
+				elementValues := value.(*interpreter.JList).ElementValues
+				resValue := elementValues[len(elementValues)-1]
+				require.IsType(t, 0, resValue.GetValue())
+				require.Equal(t, 10000, resValue.GetValue())
 			},
 		},
 		{
@@ -254,6 +266,71 @@ func TestJInterpreter_Visit(t *testing.T) {
 				require.NoError(t, err)
 				require.IsType(t, "", number.GetValue())
 				require.Equal(t, "hello world", number.GetValue())
+			},
+		},
+		{
+			name: "OK19: list add list",
+			text: "[1, 2, 3] + [4, 5, 6]",
+			checkResult: func(t *testing.T, value interpreter.JValue, err error) {
+				t.Helper()
+				require.NoError(t, err)
+				require.IsType(t, interpreter.NewJList(nil), value)
+				require.Equal(t, "[1, 2, 3, 4, 5, 6]", value.String())
+			},
+		},
+		{
+			name: "OK20 list add number",
+			text: "[1, 2, 3] + 6",
+			checkResult: func(t *testing.T, value interpreter.JValue, err error) {
+				t.Helper()
+				require.NoError(t, err)
+				require.IsType(t, interpreter.NewJList(nil), value)
+				require.Equal(t, "[1, 2, 3, 6]", value.String())
+			},
+		},
+		{
+			name: "OK21 list remove number",
+			text: "[1, 2, 3, 4] - 1",
+			checkResult: func(t *testing.T, value interpreter.JValue, err error) {
+				t.Helper()
+				require.NoError(t, err)
+				require.IsType(t, interpreter.NewJList(nil), value)
+				require.Equal(t, "[1, 3, 4]", value.String())
+			},
+		},
+		{
+			name: "OK22 list mul number",
+			text: "[1, 2, 3] * 3",
+			checkResult: func(t *testing.T, value interpreter.JValue, err error) {
+				t.Helper()
+				require.NoError(t, err)
+				require.IsType(t, interpreter.NewJList(nil), value)
+				require.Equal(t, "[1, 2, 3, 1, 2, 3, 1, 2, 3]", value.String())
+			},
+		},
+		{
+			name: "OK23 list mul list",
+			text: "[1, 2, 3] * [4, 5, 6]",
+			checkResult: func(t *testing.T, value interpreter.JValue, err error) {
+				t.Helper()
+				require.NoError(t, err)
+				require.IsType(t, interpreter.NewJList(nil), value)
+				require.Equal(t, "[4, 10, 18]", value.String())
+			},
+		},
+		{
+			name: "OK24 list index access",
+			text: "list24[3]",
+			preRun: func(t *testing.T) {
+				t.Helper()
+
+				assignVariable(t, "list24 = [2, 3, 4, 5, 6]")
+			},
+			checkResult: func(t *testing.T, value interpreter.JValue, err error) {
+				t.Helper()
+				require.NoError(t, err)
+				require.IsType(t, 0, value.GetValue())
+				require.Equal(t, 5, value.GetValue())
 			},
 		},
 		{
