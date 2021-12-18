@@ -26,7 +26,7 @@ func NewSafeMap() *SafeMap {
 	}
 }
 
-// Del deletes the value with the given key from m.
+// Del deletes the object with the given key from m.
 func (m *SafeMap) Del(key interface{}) {
 	m.lock.Lock()
 
@@ -60,7 +60,7 @@ func (m *SafeMap) Del(key interface{}) {
 	m.lock.Unlock()
 }
 
-// Get gets the value with the given key from m.
+// Get gets the object with the given key from m.
 func (m *SafeMap) Get(key interface{}) (interface{}, bool) {
 	m.lock.RLock()
 	defer m.lock.RUnlock()
@@ -74,7 +74,7 @@ func (m *SafeMap) Get(key interface{}) (interface{}, bool) {
 	return val, ok
 }
 
-// Set sets the value into m with the given key.
+// Set sets the object into m with the given key.
 func (m *SafeMap) Set(key, value interface{}) {
 	m.lock.Lock()
 
