@@ -49,5 +49,5 @@ linters:
     - maligned  # Deprecated
     - interfacer # Deprecated
     - golint  # Deprecated
-    - ireturn # Do not check the return value is interface
+    - ireturn # Do not check the return object is interface
   enable-all: true

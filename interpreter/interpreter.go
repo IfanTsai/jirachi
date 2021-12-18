@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"reflect"
 
+	"github.com/IfanTsai/jirachi/interpreter/object"
+
 	"github.com/IfanTsai/jirachi/common"
 	"github.com/IfanTsai/jirachi/lexer"
 	"github.com/IfanTsai/jirachi/parser"
@@ -12,9 +14,9 @@ import (
 )
 
 var GlobalSymbolTable = common.NewJSymbolTable(nil).
-	Set("NULL", NewJNumber(0)).
-	Set("TRUE", NewJNumber(1)).
-	Set("FALSE", NewJNumber(0))
+	Set("NULL", object.NewJNumber(0)).
+	Set("TRUE", object.NewJNumber(1)).
+	Set("FALSE", object.NewJNumber(0))
 
 func Run(filename, text string) (interface{}, error) {
 	// generate tokens
@@ -49,11 +51,11 @@ func NewJInterpreter(context *common.JContext) *JInterpreter {
 	}
 }
 
-func (i *JInterpreter) Interpreter(ast parser.JNode) (JValue, error) {
+func (i *JInterpreter) Interpreter(ast parser.JNode) (object.JValue, error) {
 	return i.visit(ast)
 }
 
-func (i *JInterpreter) visit(node parser.JNode) (JValue, error) {
+func (i *JInterpreter) visit(node parser.JNode) (object.JValue, error) {
 	switch node.Type() {
 	case parser.Number:
 		return i.visitNumberNode(node.(*parser.JNumberNode))
@@ -92,16 +94,16 @@ func (i *JInterpreter) visit(node parser.JNode) (JValue, error) {
 	}
 }
 
-func (i *JInterpreter) visitNumberNode(node *parser.JNumberNode) (JValue, error) {
-	return NewJNumber(node.Token.Value).SetJPos(node.StartPos, node.EndPos).SetJContext(i.Context), nil
+func (i *JInterpreter) visitNumberNode(node *parser.JNumberNode) (object.JValue, error) {
+	return object.NewJNumber(node.Token.Value).SetJPos(node.StartPos, node.EndPos).SetJContext(i.Context), nil
 }
 
-func (i *JInterpreter) visitStringNode(node *parser.JStringNode) (JValue, error) {
-	return NewJString(node.Token.Value).SetJPos(node.StartPos, node.EndPos).SetJContext(i.Context), nil
+func (i *JInterpreter) visitStringNode(node *parser.JStringNode) (object.JValue, error) {
+	return object.NewJString(node.Token.Value).SetJPos(node.StartPos, node.EndPos).SetJContext(i.Context), nil
 }
 
-func (i *JInterpreter) visitListNode(node *parser.JListNode) (JValue, error) {
-	elementValues := make([]JValue, len(node.ElementNodes))
+func (i *JInterpreter) visitListNode(node *parser.JListNode) (object.JValue, error) {
+	elementValues := make([]object.JValue, len(node.ElementNodes))
 	for index := range node.ElementNodes {
 		value, err := i.visit(node.ElementNodes[index])
 		if err != nil {
@@ -110,10 +112,10 @@ func (i *JInterpreter) visitListNode(node *parser.JListNode) (JValue, error) {
 		elementValues[index] = value
 	}
 
-	return NewJList(elementValues).SetJPos(node.StartPos, node.EndPos).SetJContext(i.Context), nil
+	return object.NewJList(elementValues).SetJPos(node.StartPos, node.EndPos).SetJContext(i.Context), nil
 }
 
-func (i *JInterpreter) visitVarAssignNode(node *parser.JVarAssignNode) (JValue, error) {
+func (i *JInterpreter) visitVarAssignNode(node *parser.JVarAssignNode) (object.JValue, error) {
 	varName := node.Token.Value
 
 	varValue, err := i.visit(node.Node)
@@ -126,7 +128,7 @@ func (i *JInterpreter) visitVarAssignNode(node *parser.JVarAssignNode) (JValue, 
 	return varValue, nil
 }
 
-func (i *JInterpreter) visitVarAccessNode(node *parser.JVarAccessNode) (JValue, error) {
+func (i *JInterpreter) visitVarAccessNode(node *parser.JVarAccessNode) (object.JValue, error) {
 	varName := node.Token.Value
 	varValue := i.Context.SymbolTable.Get(varName)
 	if varValue == nil {
@@ -140,10 +142,10 @@ func (i *JInterpreter) visitVarAccessNode(node *parser.JVarAccessNode) (JValue, 
 		}, "failed to access variable")
 	}
 
-	return varValue.(JValue).Copy().SetJPos(node.StartPos, node.EndPos).SetJContext(i.Context), nil
+	return varValue.(object.JValue).Copy().SetJPos(node.StartPos, node.EndPos).SetJContext(i.Context), nil
 }
 
-func (i *JInterpreter) visitBinOpNode(node *parser.JBinOpNode) (JValue, error) {
+func (i *JInterpreter) visitBinOpNode(node *parser.JBinOpNode) (object.JValue, error) {
 	leftValue, err := i.visit(node.LeftNode)
 	if err != nil {
 		return nil, err
@@ -154,7 +156,7 @@ func (i *JInterpreter) visitBinOpNode(node *parser.JBinOpNode) (JValue, error) {
 		return nil, err
 	}
 
-	var resValue JValue
+	var resValue object.JValue
 
 	switch node.Token.Type {
 	case token.PLUS:
@@ -203,14 +205,14 @@ func (i *JInterpreter) visitBinOpNode(node *parser.JBinOpNode) (JValue, error) {
 	return resValue.SetJPos(node.StartPos, node.EndPos), nil
 }
 
-func (i *JInterpreter) visitUnaryOpNode(node *parser.JUnaryOpNode) (JValue, error) {
+func (i *JInterpreter) visitUnaryOpNode(node *parser.JUnaryOpNode) (object.JValue, error) {
 	number, err := i.visit(node.Node)
 	if err != nil {
 		return nil, err
 	}
 	switch {
 	case node.Token.Type == token.MINUS:
-		number, err = number.MulBy(NewJNumber(-1))
+		number, err = number.MulBy(object.NewJNumber(-1))
 	case node.Token.Match(token.KEYWORD, token.NOT):
 		number, err = number.Not()
 	}
@@ -222,7 +224,7 @@ func (i *JInterpreter) visitUnaryOpNode(node *parser.JUnaryOpNode) (JValue, erro
 	return number.SetJPos(node.StartPos, node.EndPos), nil
 }
 
-func (i *JInterpreter) visitIfExprNode(node *parser.JIfExprNode) (JValue, error) {
+func (i *JInterpreter) visitIfExprNode(node *parser.JIfExprNode) (object.JValue, error) {
 	for index := range node.CaseNodes {
 		condition := node.CaseNodes[index][0]
 		expr := node.CaseNodes[index][1]
@@ -252,12 +254,12 @@ func (i *JInterpreter) visitIfExprNode(node *parser.JIfExprNode) (JValue, error)
 	}
 
 	// eg. IF false THEN 123
-	return NewJNumber(nil), nil
+	return object.NewJNumber(nil), nil
 }
 
-func (i *JInterpreter) visitWhileExprNode(node *parser.JWhileExprNode) (JValue, error) {
-	var res JValue
-	var resElementValues []JValue
+func (i *JInterpreter) visitWhileExprNode(node *parser.JWhileExprNode) (object.JValue, error) {
+	var res object.JValue
+	var resElementValues []object.JValue
 
 	for {
 		condition, err := i.visit(node.ConditionNode)
@@ -278,13 +280,13 @@ func (i *JInterpreter) visitWhileExprNode(node *parser.JWhileExprNode) (JValue, 
 	}
 
 	if res == nil {
-		return NewJNumber(nil), nil
+		return object.NewJNumber(nil), nil
 	}
 
-	return NewJList(resElementValues).SetJPos(node.StartPos, node.EndPos).SetJContext(i.Context), nil
+	return object.NewJList(resElementValues).SetJPos(node.StartPos, node.EndPos).SetJContext(i.Context), nil
 }
 
-func (i *JInterpreter) visitForExprNode(node *parser.JForExprNode) (JValue, error) {
+func (i *JInterpreter) visitForExprNode(node *parser.JForExprNode) (object.JValue, error) {
 	startNumber, err := i.visit(node.StartValueNode)
 	if err != nil {
 		return nil, err
@@ -295,18 +297,18 @@ func (i *JInterpreter) visitForExprNode(node *parser.JForExprNode) (JValue, erro
 		return nil, err
 	}
 
-	var stepNumber JValue
+	var stepNumber object.JValue
 	if node.StepValueNode != nil {
 		stepNumber, err = i.visit(node.StepValueNode)
 		if err != nil {
 			return nil, err
 		}
 	} else {
-		stepNumber = NewJNumber(1)
+		stepNumber = object.NewJNumber(1)
 	}
 
 	isFloat := false
-	var resElementValues []JValue
+	var resElementValues []object.JValue
 
 	if _, ok := startNumber.GetValue().(float64); ok {
 		isFloat = true
@@ -316,7 +318,7 @@ func (i *JInterpreter) visitForExprNode(node *parser.JForExprNode) (JValue, erro
 		isFloat = true
 	}
 
-	var res JValue
+	var res object.JValue
 
 	if isFloat {
 		var start, end, step float64
@@ -343,7 +345,7 @@ func (i *JInterpreter) visitForExprNode(node *parser.JForExprNode) (JValue, erro
 				break
 			}
 
-			i.Context.SymbolTable.Set(node.Token.Value, NewJNumber(j))
+			i.Context.SymbolTable.Set(node.Token.Value, object.NewJNumber(j))
 
 			res, err = i.visit(node.BodyNode)
 			if err != nil {
@@ -362,7 +364,7 @@ func (i *JInterpreter) visitForExprNode(node *parser.JForExprNode) (JValue, erro
 				break
 			}
 
-			i.Context.SymbolTable.Set(node.Token.Value, NewJNumber(j))
+			i.Context.SymbolTable.Set(node.Token.Value, object.NewJNumber(j))
 
 			res, err = i.visit(node.BodyNode)
 			if err != nil {
@@ -374,13 +376,13 @@ func (i *JInterpreter) visitForExprNode(node *parser.JForExprNode) (JValue, erro
 	}
 
 	if res == nil {
-		return NewJNumber(nil), nil
+		return object.NewJNumber(nil), nil
 	}
 
-	return NewJList(resElementValues).SetJPos(node.StartPos, node.EndPos).SetJContext(i.Context), nil
+	return object.NewJList(resElementValues).SetJPos(node.StartPos, node.EndPos).SetJContext(i.Context), nil
 }
 
-func (i *JInterpreter) visitFunDefNode(node *parser.JFuncDefNode) (JValue, error) {
+func (i *JInterpreter) visitFunDefNode(node *parser.JFuncDefNode) (object.JValue, error) {
 	argNames := make([]string, len(node.ArgTokens))
 	var ok bool
 	for index := range node.ArgTokens {
@@ -391,7 +393,7 @@ func (i *JInterpreter) visitFunDefNode(node *parser.JFuncDefNode) (JValue, error
 					EndPos:   node.EndPos,
 				},
 				Context: i.Context,
-				Details: "arg token value is not string",
+				Details: "arg token object is not string",
 			}, "failed to visit function definition node")
 		}
 	}
@@ -401,7 +403,7 @@ func (i *JInterpreter) visitFunDefNode(node *parser.JFuncDefNode) (JValue, error
 		funcName = node.Token.Value
 	}
 
-	functionValue := NewJFunction(funcName, argNames, node.BodyNode).
+	functionValue := object.NewJFunction(funcName, argNames, node.BodyNode).
 		SetJPos(node.StartPos, node.EndPos).
 		SetJContext(i.Context)
 
@@ -412,13 +414,13 @@ func (i *JInterpreter) visitFunDefNode(node *parser.JFuncDefNode) (JValue, error
 	return functionValue, nil
 }
 
-func (i *JInterpreter) visitCallExprNode(node *parser.JCallExprNode) (JValue, error) {
+func (i *JInterpreter) visitCallExprNode(node *parser.JCallExprNode) (object.JValue, error) {
 	callValue, err := i.visit(node.CallNode)
 	if err != nil {
 		return nil, err
 	}
 
-	argValues := make([]JValue, len(node.ArgNodes))
+	argValues := make([]object.JValue, len(node.ArgNodes))
 	for index := range node.ArgNodes {
 		argValue, err := i.visit(node.ArgNodes[index])
 		if err != nil {
@@ -427,15 +429,19 @@ func (i *JInterpreter) visitCallExprNode(node *parser.JCallExprNode) (JValue, er
 		argValues[index] = argValue
 	}
 
-	returnValue, err := callValue.Execute(argValues)
-	if err != nil {
-		return nil, errors.WithMessage(err, "failed to visit call expression node")
-	}
+	if function, ok := callValue.(*object.JFunction); ok {
+		return executeFunction(function, argValues)
+	} else {
+		returnValue, err := callValue.Execute(argValues)
+		if err != nil {
+			return nil, errors.WithMessage(err, "failed to visit call expression node")
+		}
 
-	return returnValue, nil
+		return returnValue, nil
+	}
 }
 
-func (i *JInterpreter) visitIndexExprNode(node *parser.JIndexExprNode) (JValue, error) {
+func (i *JInterpreter) visitIndexExprNode(node *parser.JIndexExprNode) (object.JValue, error) {
 	indexNodeValue, err := i.visit(node.IndexNode)
 	if err != nil {
 		return nil, err
@@ -452,4 +458,40 @@ func (i *JInterpreter) visitIndexExprNode(node *parser.JIndexExprNode) (JValue, 
 	}
 
 	return resValue, nil
+}
+
+func executeFunction(function *object.JFunction, argValues []object.JValue) (object.JValue, error) {
+	symbolTable := common.NewJSymbolTable(function.GetContext().SymbolTable)
+	newContext := common.NewJContext(function.GetValue().(string), symbolTable, function.GetContext(), function.GetStartPos())
+
+	if len(argValues) > len(function.ArgNames) {
+		return nil, errors.Wrap(&common.JRunTimeError{
+			JError: &common.JError{
+				StartPos: function.GetStartPos(),
+				EndPos:   function.GetEndPos(),
+			},
+			Context: function.GetContext(),
+			Details: fmt.Sprintf("%d too many args passed into %v", len(argValues)-len(function.ArgNames), function.GetValue()),
+		}, "failed to execute")
+	}
+
+	if len(argValues) < len(function.ArgNames) {
+		return nil, errors.Wrap(&common.JRunTimeError{
+			JError: &common.JError{
+				StartPos: function.GetStartPos(),
+				EndPos:   function.GetEndPos(),
+			},
+			Context: function.GetContext(),
+			Details: fmt.Sprintf("%d too few passed into %v", len(function.ArgNames)-len(argValues), function.GetValue()),
+		}, "failed to execute")
+	}
+
+	for index := range argValues {
+		argName := function.ArgNames[index]
+		argValue := argValues[index]
+		argValue.SetJContext(newContext)
+		newContext.SymbolTable.Set(argName, argValue)
+	}
+
+	return NewJInterpreter(newContext).visit(function.BodyNode)
 }
