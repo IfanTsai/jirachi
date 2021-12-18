@@ -33,13 +33,10 @@ func (p *JParser) Parse() (JNode, error) {
 	}
 
 	if p.CurrentToken.Type != token.EOF {
-		return nil, errors.Wrap(&common.JInvalidSyntaxError{
-			JError: &common.JError{
-				StartPos: p.CurrentToken.StartPos,
-				EndPos:   p.CurrentToken.EndPos,
-			},
-			Details: "Expected '+', '-', '*', '/' or '^'",
-		}, "failed to parse expr")
+		return nil, p.createInvalidSyntaxError(
+			"number, identifier, '+', '-', '(', '[', 'IF', 'FOR', 'WHILE', '*', '/' or '^'",
+			"expression",
+		)
 	}
 
 	return ast, nil
@@ -59,15 +56,81 @@ func (p *JParser) back() {
 	}
 }
 
+func (p *JParser) indexExpr(atom JNode) (JNode, error) {
+	startPos := p.CurrentToken.StartPos
+
+	p.advance()
+
+	expr, err := p.expr()
+	if err != nil {
+		return nil, err
+	}
+
+	if p.CurrentToken.Type != token.RSQUARE {
+		return nil, p.createInvalidSyntaxError("']'", "index expression")
+	}
+
+	p.advance()
+
+	return &JIndexExprNode{
+		JBaseNode: &JBaseNode{
+			StartPos: startPos,
+			EndPos:   p.CurrentToken.EndPos.Copy().Back(nil),
+		},
+		IndexNode: atom,
+		IndexExpr: expr,
+	}, nil
+}
+
+func (p *JParser) listExpr() (JNode, error) {
+	if p.CurrentToken.Type != token.LSQUARE {
+		return nil, p.createInvalidSyntaxError("'['", "list expression")
+	}
+
+	startPos := p.CurrentToken.StartPos
+
+	p.advance()
+
+	var elementNodes []JNode
+	if p.CurrentToken.Type != token.RSQUARE {
+		expr, err := p.expr()
+		if err != nil {
+			return nil, p.createInvalidSyntaxError(
+				"Expected ']', 'IF', 'FOR', 'WHILE', 'FUN', int, float, identifier, '+', '-', '(', '[', or 'NOT'",
+				"list expression",
+			)
+		}
+
+		elementNodes = append(elementNodes, expr)
+
+		for p.CurrentToken.Type == token.COMMA {
+			p.advance()
+
+			expr, err := p.expr()
+			if err != nil {
+				return nil, err
+			}
+			elementNodes = append(elementNodes, expr)
+		}
+
+		if p.CurrentToken.Type != token.RSQUARE {
+			return nil, p.createInvalidSyntaxError("',' or ']'", "list expression")
+		}
+	}
+
+	p.advance()
+	return &JListNode{
+		JBaseNode: &JBaseNode{
+			StartPos: startPos,
+			EndPos:   p.CurrentToken.EndPos.Copy().Back(nil),
+		},
+		ElementNodes: elementNodes,
+	}, nil
+}
+
 func (p *JParser) whileExpr() (JNode, error) {
 	if !p.CurrentToken.Match(token.KEYWORD, token.WHILE) {
-		return nil, errors.Wrap(&common.JInvalidSyntaxError{
-			JError: &common.JError{
-				StartPos: p.CurrentToken.StartPos,
-				EndPos:   p.CurrentToken.EndPos,
-			},
-			Details: fmt.Sprintf("Expected '%s'", token.WHILE),
-		}, "failed to parse while expression")
+		return nil, p.createInvalidSyntaxError(fmt.Sprintf("'%s'", token.WHILE), "while expression")
 	}
 
 	p.advance()
@@ -78,13 +141,7 @@ func (p *JParser) whileExpr() (JNode, error) {
 	}
 
 	if !p.CurrentToken.Match(token.KEYWORD, token.THEN) {
-		return nil, errors.Wrap(&common.JInvalidSyntaxError{
-			JError: &common.JError{
-				StartPos: p.CurrentToken.StartPos,
-				EndPos:   p.CurrentToken.EndPos,
-			},
-			Details: fmt.Sprintf("Expect '%s'", token.THEN),
-		}, "failed to parse while expression")
+		return nil, p.createInvalidSyntaxError(fmt.Sprintf("'%s'", token.THEN), "while expression")
 	}
 
 	p.advance()
@@ -106,25 +163,13 @@ func (p *JParser) whileExpr() (JNode, error) {
 
 func (p *JParser) forExpr() (JNode, error) {
 	if !p.CurrentToken.Match(token.KEYWORD, token.FOR) {
-		return nil, errors.Wrap(&common.JInvalidSyntaxError{
-			JError: &common.JError{
-				StartPos: p.CurrentToken.StartPos,
-				EndPos:   p.CurrentToken.EndPos,
-			},
-			Details: fmt.Sprintf("Expected '%s'", token.FOR),
-		}, "failed to parse for expression")
+		return nil, p.createInvalidSyntaxError(fmt.Sprintf("'%s'", token.FOR), "for expression")
 	}
 
 	p.advance()
 
 	if p.CurrentToken.Type != token.IDENTIFIER {
-		return nil, errors.Wrap(&common.JInvalidSyntaxError{
-			JError: &common.JError{
-				StartPos: p.CurrentToken.StartPos,
-				EndPos:   p.CurrentToken.EndPos,
-			},
-			Details: "Expected identifier",
-		}, "failed to parse for expression")
+		return nil, p.createInvalidSyntaxError("identifier", "for expression")
 	}
 
 	varNameToken := p.CurrentToken
@@ -132,13 +177,7 @@ func (p *JParser) forExpr() (JNode, error) {
 	p.advance()
 
 	if p.CurrentToken.Type != token.EQ {
-		return nil, errors.Wrap(&common.JInvalidSyntaxError{
-			JError: &common.JError{
-				StartPos: p.CurrentToken.StartPos,
-				EndPos:   p.CurrentToken.EndPos,
-			},
-			Details: "Expected '='",
-		}, "failed to parse for expression")
+		return nil, p.createInvalidSyntaxError("'='", "for expression")
 	}
 
 	p.advance()
@@ -149,13 +188,7 @@ func (p *JParser) forExpr() (JNode, error) {
 	}
 
 	if !p.CurrentToken.Match(token.KEYWORD, token.TO) {
-		return nil, errors.Wrap(&common.JInvalidSyntaxError{
-			JError: &common.JError{
-				StartPos: p.CurrentToken.StartPos,
-				EndPos:   p.CurrentToken.EndPos,
-			},
-			Details: fmt.Sprintf("Expect '%s'", token.TO),
-		}, "failed to parse for expression")
+		return nil, p.createInvalidSyntaxError(fmt.Sprintf("'%s'", token.TO), "for expression")
 	}
 
 	p.advance()
@@ -176,13 +209,7 @@ func (p *JParser) forExpr() (JNode, error) {
 	}
 
 	if !p.CurrentToken.Match(token.KEYWORD, token.THEN) {
-		return nil, errors.Wrap(&common.JInvalidSyntaxError{
-			JError: &common.JError{
-				StartPos: p.CurrentToken.StartPos,
-				EndPos:   p.CurrentToken.EndPos,
-			},
-			Details: fmt.Sprintf("Expect '%s'", token.THEN),
-		}, "failed to parse for expression")
+		return nil, p.createInvalidSyntaxError(fmt.Sprintf("'%s'", token.THEN), "for expression")
 	}
 
 	p.advance()
@@ -207,13 +234,7 @@ func (p *JParser) forExpr() (JNode, error) {
 
 func (p *JParser) ifExpr() (JNode, error) {
 	if !p.CurrentToken.Match(token.KEYWORD, token.IF) {
-		return nil, errors.Wrap(&common.JInvalidSyntaxError{
-			JError: &common.JError{
-				StartPos: p.CurrentToken.StartPos,
-				EndPos:   p.CurrentToken.EndPos,
-			},
-			Details: fmt.Sprintf("Expected '%s'", token.IF),
-		}, "failed to parse if expression")
+		return nil, p.createInvalidSyntaxError(fmt.Sprintf("'%s'", token.IF), "if expression")
 	}
 
 	var elseCase JNode
@@ -259,13 +280,7 @@ func (p *JParser) ifExpr() (JNode, error) {
 
 func (p *JParser) funcDef() (JNode, error) {
 	if !p.CurrentToken.Match(token.KEYWORD, token.FUN) {
-		return nil, errors.Wrap(&common.JInvalidSyntaxError{
-			JError: &common.JError{
-				StartPos: p.CurrentToken.StartPos,
-				EndPos:   p.CurrentToken.EndPos,
-			},
-			Details: fmt.Sprintf("Expected '%s'", token.FUN),
-		}, "failed to parse function definition")
+		return nil, p.createInvalidSyntaxError(fmt.Sprintf("'%s'", token.FUN), "function definition")
 	}
 
 	p.advance()
@@ -278,13 +293,7 @@ func (p *JParser) funcDef() (JNode, error) {
 	}
 
 	if p.CurrentToken.Type != token.LPAREN {
-		return nil, errors.Wrap(&common.JInvalidSyntaxError{
-			JError: &common.JError{
-				StartPos: p.CurrentToken.StartPos,
-				EndPos:   p.CurrentToken.EndPos,
-			},
-			Details: "Expected '('",
-		}, "failed to parse function definition")
+		return nil, p.createInvalidSyntaxError("'('", "function definition")
 	}
 
 	p.advance()
@@ -299,13 +308,7 @@ func (p *JParser) funcDef() (JNode, error) {
 			p.advance()
 
 			if p.CurrentToken.Type != token.IDENTIFIER {
-				return nil, errors.Wrap(&common.JInvalidSyntaxError{
-					JError: &common.JError{
-						StartPos: p.CurrentToken.StartPos,
-						EndPos:   p.CurrentToken.EndPos,
-					},
-					Details: fmt.Sprintf("Expected '%s'", token.IDENTIFIER),
-				}, "failed to parse function definition")
+				return nil, p.createInvalidSyntaxError("identifier", "function definition")
 			}
 
 			argTokens = append(argTokens, p.CurrentToken)
@@ -315,25 +318,13 @@ func (p *JParser) funcDef() (JNode, error) {
 	}
 
 	if p.CurrentToken.Type != token.RPAREN {
-		return nil, errors.Wrap(&common.JInvalidSyntaxError{
-			JError: &common.JError{
-				StartPos: p.CurrentToken.StartPos,
-				EndPos:   p.CurrentToken.EndPos,
-			},
-			Details: "Expected '('",
-		}, "failed to parse function definition")
+		return nil, p.createInvalidSyntaxError("')'", "function definition")
 	}
 
 	p.advance()
 
 	if p.CurrentToken.Type != token.ARROW {
-		return nil, errors.Wrap(&common.JInvalidSyntaxError{
-			JError: &common.JError{
-				StartPos: p.CurrentToken.StartPos,
-				EndPos:   p.CurrentToken.EndPos,
-			},
-			Details: "Expected '->'",
-		}, "failed to parse function definition")
+		return nil, p.createInvalidSyntaxError("'->'", "function definition")
 	}
 
 	p.advance()
@@ -379,13 +370,19 @@ func (p *JParser) atom() (JNode, error) {
 	case token.IDENTIFIER:
 		p.advance()
 
-		return &JVarAccessNode{
+		atom := &JVarAccessNode{
 			JBaseNode: &JBaseNode{
 				Token:    currentToken,
 				StartPos: currentToken.StartPos,
 				EndPos:   currentToken.EndPos,
 			},
-		}, nil
+		}
+
+		if p.CurrentToken.Type == token.LSQUARE {
+			return p.indexExpr(atom)
+		} else {
+			return atom, nil
+		}
 	case token.LPAREN:
 		p.advance()
 		expr, err := p.expr()
@@ -394,18 +391,14 @@ func (p *JParser) atom() (JNode, error) {
 		}
 
 		if p.CurrentToken.Type != token.RPAREN {
-			return nil, errors.Wrap(&common.JInvalidSyntaxError{
-				JError: &common.JError{
-					StartPos: currentToken.StartPos,
-					EndPos:   currentToken.EndPos,
-				},
-				Details: "Expected ')'",
-			}, "failed to parse LPAREN")
+			return nil, p.createInvalidSyntaxError("')'", "LPAREN")
 		}
 
 		p.advance()
 
 		return expr, nil
+	case token.LSQUARE:
+		return p.listExpr()
 	case token.KEYWORD:
 		switch currentToken.Value {
 		case token.IF:
@@ -419,13 +412,7 @@ func (p *JParser) atom() (JNode, error) {
 		}
 	}
 
-	return nil, errors.Wrap(&common.JInvalidSyntaxError{
-		JError: &common.JError{
-			StartPos: currentToken.StartPos,
-			EndPos:   currentToken.EndPos,
-		},
-		Details: "Expected int, float, identifier, '+', '-', '(' or 'NOT'",
-	}, "failed to parse factor")
+	return nil, p.createInvalidSyntaxError("number, identifier, '+', '-', '(', '[' or 'NOT'", "factor")
 }
 
 func (p *JParser) call() (JNode, error) {
@@ -443,14 +430,10 @@ func (p *JParser) call() (JNode, error) {
 		} else {
 			expr, err := p.expr()
 			if err != nil {
-				return nil, errors.Wrap(&common.JInvalidSyntaxError{
-					JError: &common.JError{
-						StartPos: p.CurrentToken.StartPos,
-						EndPos:   p.CurrentToken.EndPos,
-					},
-					Details: "Expected ')', 'IF', 'FOR', 'WHILE', 'FUN', int, float, identifier, " +
-						"'+', '-', '(' or 'NOT'",
-				}, "failed to parse call expression ")
+				return nil, p.createInvalidSyntaxError(
+					"Expected ')', 'IF', 'FOR', 'WHILE', 'FUN', int, float, identifier, '+', '-', '(', '[' or 'NOT'",
+					"call expression",
+				)
 			}
 
 			argNodes = append(argNodes, expr)
@@ -466,13 +449,7 @@ func (p *JParser) call() (JNode, error) {
 			}
 
 			if p.CurrentToken.Type != token.RPAREN {
-				return nil, errors.Wrap(&common.JInvalidSyntaxError{
-					JError: &common.JError{
-						StartPos: p.CurrentToken.StartPos,
-						EndPos:   p.CurrentToken.EndPos,
-					},
-					Details: "Expected ',' or ')'",
-				}, "failed to parse call expression ")
+				return nil, p.createInvalidSyntaxError("',' or ')'", "call expression")
 			}
 
 			p.advance()
@@ -576,13 +553,7 @@ func (p *JParser) expr() (JNode, error) {
 			}, nil
 		} else if p.CurrentToken.Type == token.IDENTIFIER {
 			// no support consecutive identifiers
-			return nil, errors.Wrap(&common.JInvalidSyntaxError{
-				JError: &common.JError{
-					StartPos: p.CurrentToken.StartPos,
-					EndPos:   p.CurrentToken.EndPos,
-				},
-				Details: "Expected '+', '-', '*', '/' or '^'",
-			}, "failed to parse expr")
+			return nil, p.createInvalidSyntaxError("'+', '-', '*', '/' or '^'", "expression")
 		} else {
 			// go back when it is not an assignment expression
 			p.back()
@@ -635,13 +606,7 @@ func (p *JParser) parseElifThenExpr(cases [][2]JNode) ([][2]JNode, error) {
 	}
 
 	if !p.CurrentToken.Match(token.KEYWORD, token.THEN) {
-		return nil, errors.Wrap(&common.JInvalidSyntaxError{
-			JError: &common.JError{
-				StartPos: p.CurrentToken.StartPos,
-				EndPos:   p.CurrentToken.EndPos,
-			},
-			Details: fmt.Sprintf("Expected '%s'", token.THEN),
-		}, "failed to parse if expression")
+		return nil, p.createInvalidSyntaxError(fmt.Sprintf("'%s'", token.THEN), "if expression")
 	}
 
 	p.advance()
@@ -654,4 +619,14 @@ func (p *JParser) parseElifThenExpr(cases [][2]JNode) ([][2]JNode, error) {
 	cases = append(cases, [2]JNode{condition, expr})
 
 	return cases, nil
+}
+
+func (p *JParser) createInvalidSyntaxError(expected, parseType string) error {
+	return errors.Wrap(&common.JInvalidSyntaxError{
+		JError: &common.JError{
+			StartPos: p.CurrentToken.StartPos,
+			EndPos:   p.CurrentToken.EndPos,
+		},
+		Details: "Expected " + expected,
+	}, "failed to parse "+parseType)
 }

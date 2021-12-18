@@ -11,9 +11,9 @@ term       : factor ( ( MUL | DIV ) factor )*
 factor     : ( PLUS | MINUS ) factor
            : power
 
-power      : call ( POW factor )*
+power      : call-expr ( POW factor )*
 
-call       : atom ( LPAREN ( expr ( COMMA expr )* )? RPAREN )?
+call-expr  : atom ( LPAREN ( expr ( COMMA expr )* )? RPAREN )?
 
 atom       : INT | FLOAT | STRING
            : IDENTIFIER                // variable access
@@ -22,6 +22,9 @@ atom       : INT | FLOAT | STRING
            : for-expr
            : while-expr
            : func-def
+           : index-expr
+
+list-expr  : LSQUARE ( expr ( COMMA expr )* )? RSQUARE
 
 if-expr    : KEYWORD:IF expr KEYWORD:THEN expr
              (KEYWORD:ELIF expr KEYWORD:THEN expr)*
@@ -35,3 +38,5 @@ while-expr : KEYWORD:WHILE expr KEYWORD:THEN expr
 func-def   : KEYWORD:FUN IDENTIFIER?
              LPAREN ( IDENTIFIER ( COMMA IDENTIFIER )* )? RPAREN
              ARROW expr
+
+index-expr : atom LSQUARE expr RSQUARE  // a[0]

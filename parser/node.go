@@ -15,6 +15,7 @@ const (
 	Base JNodeType = iota
 	Number
 	String
+	List
 	VarAssign
 	VarAccess
 	BinOp
@@ -24,6 +25,7 @@ const (
 	WhileExpr
 	FuncDefExpr
 	CallExpr
+	IndexExpr
 )
 
 // JNode is general node interface of AST
@@ -84,8 +86,44 @@ func (s *JStringNode) Type() JNodeType {
 	return String
 }
 
-func (s *JStringNode) String() string {
-	return "\"" + s.Token.String() + "\""
+// JListNode is list node structure of AST
+type JListNode struct {
+	*JBaseNode
+	ElementNodes []JNode
+}
+
+func (l *JListNode) Type() JNodeType {
+	return List
+}
+
+func (l *JListNode) String() string {
+	strBuilder := strings.Builder{}
+	strBuilder.WriteByte('[')
+	for index, element := range l.ElementNodes {
+		if index != 0 {
+			strBuilder.WriteString(", ")
+		}
+
+		strBuilder.WriteString(element.String())
+	}
+	strBuilder.WriteByte(']')
+
+	return strBuilder.String()
+}
+
+// JIndexExprNode is index expression node structrue of AST
+type JIndexExprNode struct {
+	*JBaseNode
+	IndexNode JNode
+	IndexExpr JNode
+}
+
+func (i *JIndexExprNode) Type() JNodeType {
+	return IndexExpr
+}
+
+func (i *JIndexExprNode) String() string {
+	return i.IndexNode.String() + "[" + i.IndexExpr.String() + "]"
 }
 
 // JBinOpNode is binary operation node structure of AST
@@ -128,7 +166,7 @@ func (n *JVarAssignNode) Type() JNodeType {
 }
 
 func (n *JVarAssignNode) String() string {
-	return "(" + n.Token.String() + " " + n.Node.String() + ")"
+	return "(" + n.Token.String() + " = " + n.Node.String() + ")"
 }
 
 // JVarAccessNode is variable access node structure of AST

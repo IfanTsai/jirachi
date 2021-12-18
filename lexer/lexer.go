@@ -79,6 +79,12 @@ func (l *JLexer) MakeTokens() ([]*token.JToken, error) {
 		case char == ')':
 			tokens = append(tokens, token.NewJToken(token.RPAREN, nil, l.Pos, l.Pos))
 			advanceAble = l.advance()
+		case char == '[':
+			tokens = append(tokens, token.NewJToken(token.LSQUARE, nil, l.Pos, l.Pos))
+			advanceAble = l.advance()
+		case char == ']':
+			tokens = append(tokens, token.NewJToken(token.RSQUARE, nil, l.Pos, l.Pos))
+			advanceAble = l.advance()
 		case char == '!':
 			tok, advanceAble, err = l.makeNotEqualToken()
 			if err != nil {
