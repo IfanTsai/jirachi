@@ -56,7 +56,7 @@ func (p *JParser) back() {
 	}
 }
 
-func (p *JParser) indexExpr(atom JNode) (JNode, error) {
+func (p *JParser) indexExpr(atomNode JNode) (JNode, error) {
 	startPos := p.CurrentToken.StartPos
 
 	p.advance()
@@ -72,14 +72,37 @@ func (p *JParser) indexExpr(atom JNode) (JNode, error) {
 
 	p.advance()
 
-	return &JIndexExprNode{
+	indexExprNode := &JIndexExprNode{
 		JBaseNode: &JBaseNode{
 			StartPos: startPos,
 			EndPos:   p.CurrentToken.EndPos.Copy().Back(nil),
 		},
-		IndexNode: atom,
+		IndexNode: atomNode,
 		IndexExpr: expr,
-	}, nil
+	}
+
+	if p.CurrentToken.Type == token.EQ {
+		p.advance()
+
+		expr, err := p.expr()
+		if err != nil {
+			return nil, err
+		}
+
+		return &JVarIndexAssignNode{
+			JVarAssignNode: &JVarAssignNode{
+				JBaseNode: &JBaseNode{
+					Token:    atomNode.GetToken(),
+					StartPos: startPos,
+					EndPos:   expr.GetEndPos(),
+				},
+				Node: expr,
+			},
+			IndexExprNode: indexExprNode,
+		}, nil
+	}
+
+	return indexExprNode, nil
 }
 
 func (p *JParser) listExpr() (JNode, error) {
@@ -370,7 +393,7 @@ func (p *JParser) atom() (JNode, error) {
 	case token.IDENTIFIER:
 		p.advance()
 
-		atom := &JVarAccessNode{
+		atomNode := &JVarAccessNode{
 			JBaseNode: &JBaseNode{
 				Token:    currentToken,
 				StartPos: currentToken.StartPos,
@@ -379,9 +402,9 @@ func (p *JParser) atom() (JNode, error) {
 		}
 
 		if p.CurrentToken.Type == token.LSQUARE {
-			return p.indexExpr(atom)
+			return p.indexExpr(atomNode)
 		} else {
-			return atom, nil
+			return atomNode, nil
 		}
 	case token.LPAREN:
 		p.advance()
@@ -455,10 +478,17 @@ func (p *JParser) call() (JNode, error) {
 			p.advance()
 		}
 
+		var endPos *common.JPosition
+		if len(argNodes) > 0 {
+			endPos = argNodes[len(argNodes)-1].GetEndPos()
+		} else {
+			endPos = atom.GetEndPos()
+		}
+
 		return &JCallExprNode{
 			JBaseNode: &JBaseNode{
 				StartPos: atom.GetStartPos(),
-				EndPos:   argNodes[len(argNodes)-1].GetEndPos(),
+				EndPos:   endPos,
 			},
 			CallNode: atom,
 			ArgNodes: argNodes,

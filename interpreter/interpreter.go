@@ -83,6 +83,8 @@ func (i *JInterpreter) visit(node parser.JNode) (object.JValue, error) {
 		return i.visitCallExprNode(node.(*parser.JCallExprNode))
 	case parser.IndexExpr:
 		return i.visitIndexExprNode(node.(*parser.JIndexExprNode))
+	case parser.VarIndexAssign:
+		return i.visitVarIndexAssignNode(node.(*parser.JVarIndexAssignNode))
 	default:
 		return nil, errors.Wrap(&common.JInvalidSyntaxError{
 			JError: &common.JError{
@@ -452,9 +454,33 @@ func (i *JInterpreter) visitIndexExprNode(node *parser.JIndexExprNode) (object.J
 		return nil, err
 	}
 
-	resValue, err := indexNodeValue.Index(indexExprValue)
+	resValue, err := indexNodeValue.IndexAccess(indexExprValue)
 	if err != nil {
 		return nil, errors.WithMessage(err, "failed to visit index expression node")
+	}
+
+	return resValue, nil
+}
+
+func (i *JInterpreter) visitVarIndexAssignNode(node *parser.JVarIndexAssignNode) (object.JValue, error) {
+	indexNodeValue, err := i.visit(node.IndexExprNode.IndexNode)
+	if err != nil {
+		return nil, err
+	}
+
+	indexExprValue, err := i.visit(node.IndexExprNode.IndexExpr)
+	if err != nil {
+		return nil, err
+	}
+
+	varValue, err := i.visit(node.Node)
+	if err != nil {
+		return nil, err
+	}
+
+	resValue, err := indexNodeValue.IndexAssign(indexExprValue, varValue)
+	if err != nil {
+		return nil, errors.WithMessage(err, "failed to visit variable index expression node")
 	}
 
 	return resValue, nil
