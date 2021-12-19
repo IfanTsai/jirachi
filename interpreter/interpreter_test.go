@@ -281,7 +281,7 @@ func TestJInterpreter_Visit(t *testing.T) {
 			},
 		},
 		{
-			name: "OK20 list add number",
+			name: "OK20: list add number",
 			text: "[1, 2, 3] + 6",
 			checkResult: func(t *testing.T, value object.JValue, err error) {
 				t.Helper()
@@ -291,7 +291,7 @@ func TestJInterpreter_Visit(t *testing.T) {
 			},
 		},
 		{
-			name: "OK21 list remove number",
+			name: "OK21: list remove number",
 			text: "[1, 2, 3, 4] - 1",
 			checkResult: func(t *testing.T, value object.JValue, err error) {
 				t.Helper()
@@ -301,7 +301,7 @@ func TestJInterpreter_Visit(t *testing.T) {
 			},
 		},
 		{
-			name: "OK22 list mul number",
+			name: "OK22: list mul number",
 			text: "[1, 2, 3] * 3",
 			checkResult: func(t *testing.T, value object.JValue, err error) {
 				t.Helper()
@@ -311,7 +311,7 @@ func TestJInterpreter_Visit(t *testing.T) {
 			},
 		},
 		{
-			name: "OK23 list mul list",
+			name: "OK23: list mul list",
 			text: "[1, 2, 3] * [4, 5, 6]",
 			checkResult: func(t *testing.T, value object.JValue, err error) {
 				t.Helper()
@@ -321,7 +321,7 @@ func TestJInterpreter_Visit(t *testing.T) {
 			},
 		},
 		{
-			name: "OK24 list index access",
+			name: "OK24: list index access",
 			text: "list24[3]",
 			preRun: func(t *testing.T) {
 				t.Helper()
@@ -333,6 +333,36 @@ func TestJInterpreter_Visit(t *testing.T) {
 				require.NoError(t, err)
 				require.IsType(t, 0, value.GetValue())
 				require.Equal(t, 5, value.GetValue())
+			},
+		},
+		{
+			name: "OK25: len list",
+			text: "len(list25)",
+			preRun: func(t *testing.T) {
+				t.Helper()
+
+				assignVariable(t, "list25 = [2, 3, 4, 5, 6, 7]")
+			},
+			checkResult: func(t *testing.T, value object.JValue, err error) {
+				t.Helper()
+				require.NoError(t, err)
+				require.IsType(t, 0, value.GetValue())
+				require.Equal(t, 6, value.GetValue())
+			},
+		},
+		{
+			name: "OK26: len string",
+			text: "len(string26)",
+			preRun: func(t *testing.T) {
+				t.Helper()
+
+				assignVariable(t, "string26 = 'hello world'")
+			},
+			checkResult: func(t *testing.T, value object.JValue, err error) {
+				t.Helper()
+				require.NoError(t, err)
+				require.IsType(t, 0, value.GetValue())
+				require.Equal(t, 11, value.GetValue())
 			},
 		},
 		{
