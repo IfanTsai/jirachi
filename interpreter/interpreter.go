@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"reflect"
 
+	"github.com/IfanTsai/jirachi/interpreter/builtin"
+
 	"github.com/IfanTsai/jirachi/interpreter/object"
 
 	"github.com/IfanTsai/jirachi/common"
@@ -14,9 +16,18 @@ import (
 )
 
 var GlobalSymbolTable = common.NewJSymbolTable(nil).
-	Set("NULL", object.NewJNumber(0)).
-	Set("TRUE", object.NewJNumber(1)).
-	Set("FALSE", object.NewJNumber(0))
+	Set("NULL", builtin.NULL).
+	Set("TRUE", builtin.TRUE).
+	Set("FALSE", builtin.FALSE).
+	Set("len", builtin.Len).
+	Set("type", builtin.Type).
+	Set("print", builtin.Print).
+	Set("input", builtin.Input).
+	Set("input_number", builtin.InputNumber).
+	Set("is_number", builtin.IsNumber).
+	Set("is_string", builtin.IsString).
+	Set("is_list", builtin.IsList).
+	Set("is_function", builtin.IsFunction)
 
 func Run(filename, text string) (interface{}, error) {
 	// generate tokens
@@ -434,6 +445,7 @@ func (i *JInterpreter) visitCallExprNode(node *parser.JCallExprNode) (object.JVa
 	if function, ok := callValue.(*object.JFunction); ok {
 		return executeFunction(function, argValues)
 	} else {
+		// run if function is built-in
 		returnValue, err := callValue.Execute(argValues)
 		if err != nil {
 			return nil, errors.WithMessage(err, "failed to visit call expression node")
@@ -490,26 +502,8 @@ func executeFunction(function *object.JFunction, argValues []object.JValue) (obj
 	symbolTable := common.NewJSymbolTable(function.GetContext().SymbolTable)
 	newContext := common.NewJContext(function.GetValue().(string), symbolTable, function.GetContext(), function.GetStartPos())
 
-	if len(argValues) > len(function.ArgNames) {
-		return nil, errors.Wrap(&common.JRunTimeError{
-			JError: &common.JError{
-				StartPos: function.GetStartPos(),
-				EndPos:   function.GetEndPos(),
-			},
-			Context: function.GetContext(),
-			Details: fmt.Sprintf("%d too many args passed into %v", len(argValues)-len(function.ArgNames), function.GetValue()),
-		}, "failed to execute")
-	}
-
-	if len(argValues) < len(function.ArgNames) {
-		return nil, errors.Wrap(&common.JRunTimeError{
-			JError: &common.JError{
-				StartPos: function.GetStartPos(),
-				EndPos:   function.GetEndPos(),
-			},
-			Context: function.GetContext(),
-			Details: fmt.Sprintf("%d too few passed into %v", len(function.ArgNames)-len(argValues), function.GetValue()),
-		}, "failed to execute")
+	if err := function.CheckArgs(argValues); err != nil {
+		return nil, errors.WithMessage(err, "failed to check function args")
 	}
 
 	for index := range argValues {

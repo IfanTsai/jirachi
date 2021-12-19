@@ -4,7 +4,7 @@
 
 interpreter for the basic language written in golang
 
-The plan supports the following functions:
+The plan supports the following features:
 
 - [x] Arithmetic Operations (+, -, *, /, ^)
 - [x] Comparison Operation (==, !=, >, >=, <, <=)
@@ -16,7 +16,7 @@ The plan supports the following functions:
 - [x] String
 - [x] List
 - [ ] Map
-- [ ] Built-in Functions
+- [x] Built-in Functions
 - [ ] Branch Control Statement (BREAK, CONTINUE, RETURN)
 - [ ] Comment
 - [ ] File IO
