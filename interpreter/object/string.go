@@ -5,6 +5,8 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/pkg/errors"
+
 	"github.com/IfanTsai/jirachi/common"
 )
 
@@ -21,7 +23,7 @@ func NewJString(value interface{}) *JString {
 }
 
 func (s *JString) String() string {
-	return fmt.Sprintf("\"%v\"", s.Value)
+	return fmt.Sprintf("%v", s.Value)
 }
 
 func (s *JString) SetJPos(startPos, endPos *common.JPosition) JValue {
@@ -83,4 +85,31 @@ func (s *JString) Not() (JValue, error) {
 	res := !s.IsTrue()
 
 	return NewJNumber(boolToNumber(res)).SetJContext(s.Context).(*JNumber), nil
+}
+
+func (s *JString) IndexAccess(arg JValue) (JValue, error) {
+	if index, ok := arg.GetValue().(int); ok {
+		if err := s.checkIndex(index, arg); err != nil {
+			return nil, err
+		}
+
+		return NewJString(string(s.Value.(string)[index])), nil
+	} else {
+		return nil, createNumberTypeError(arg, "index")
+	}
+}
+
+func (s *JString) checkIndex(index int, arg JValue) error {
+	if index < 0 || index >= len(s.Value.(string)) {
+		return errors.Wrap(&common.JRunTimeError{
+			JError: &common.JError{
+				StartPos: arg.GetStartPos(),
+				EndPos:   arg.GetEndPos(),
+			},
+			Context: s.Context,
+			Details: "index integer number must >= 0 and < length of string",
+		}, "failed to index")
+	}
+
+	return nil
 }

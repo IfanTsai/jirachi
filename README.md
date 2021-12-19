@@ -16,7 +16,7 @@ The plan supports the following functions:
 - [x] String
 - [x] List
 - [ ] Map
-- [ ] Built-in Functions
+- [x] Built-in Functions
 - [ ] Branch Control Statement (BREAK, CONTINUE, RETURN)
 - [ ] Comment
 - [ ] File IO

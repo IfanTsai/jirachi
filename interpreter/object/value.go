@@ -159,6 +159,7 @@ func (v *JBaseValue) createIllegalOperationError(value JValue, operation string)
 			StartPos: v.GetStartPos(),
 			EndPos:   value.GetEndPos(),
 		},
+		Context: v.GetContext(),
 		Details: "Illegal operation",
 	}, "failed to "+operation)
 }
