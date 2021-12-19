@@ -17,6 +17,7 @@ const (
 	String
 	List
 	VarAssign
+	VarIndexAssign
 	VarAccess
 	BinOp
 	UnaryOp
@@ -167,6 +168,20 @@ func (n *JVarAssignNode) Type() JNodeType {
 
 func (n *JVarAssignNode) String() string {
 	return "(" + n.Token.String() + " = " + n.Node.String() + ")"
+}
+
+// JVarIndexAssignNode is variable index assign node structure of AST
+type JVarIndexAssignNode struct {
+	*JVarAssignNode
+	IndexExprNode *JIndexExprNode
+}
+
+func (n *JVarIndexAssignNode) Type() JNodeType {
+	return VarIndexAssign
+}
+
+func (n *JVarIndexAssignNode) String() string {
+	return "(" + n.IndexExprNode.String() + " = " + n.Node.String() + ")"
 }
 
 // JVarAccessNode is variable access node structure of AST

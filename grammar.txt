@@ -39,4 +39,4 @@ func-def   : KEYWORD:FUN IDENTIFIER?
              LPAREN ( IDENTIFIER ( COMMA IDENTIFIER )* )? RPAREN
              ARROW expr
 
-index-expr : atom LSQUARE expr RSQUARE  // a[0]
+index-expr : atom LSQUARE expr RSQUARE ( EQ expr )? // a[0]

@@ -91,7 +91,7 @@ func (l *JList) SubBy(other JValue) (JValue, error) {
 	return resList, nil
 }
 
-func (l *JList) Index(arg JValue) (JValue, error) {
+func (l *JList) IndexAccess(arg JValue) (JValue, error) {
 	if index, ok := arg.GetValue().(int); ok {
 		if err := l.checkIndex(index, arg); err != nil {
 			return nil, err
@@ -100,6 +100,20 @@ func (l *JList) Index(arg JValue) (JValue, error) {
 		return l.ElementValues[index], nil
 	} else {
 		return nil, createNumberTypeError(arg, "index")
+	}
+}
+
+func (l *JList) IndexAssign(indexArg, indexValue JValue) (JValue, error) {
+	if index, ok := indexArg.GetValue().(int); ok {
+		if err := l.checkIndex(index, indexArg); err != nil {
+			return nil, err
+		}
+
+		l.ElementValues[index] = indexValue
+
+		return l, nil
+	} else {
+		return nil, createNumberTypeError(indexArg, "index")
 	}
 }
 
