@@ -1,7 +1,9 @@
-package builtin
+package interpreter_test
 
 import (
 	"testing"
+
+	"github.com/IfanTsai/jirachi/interpreter"
 
 	"github.com/IfanTsai/jirachi/common"
 	"github.com/pkg/errors"
@@ -60,7 +62,7 @@ func TestExecuteLen(t *testing.T) {
 		testCase := testCases[i]
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
-			resValue, err := executeLen(Len, testCase.args)
+			resValue, err := interpreter.ExecuteLen(interpreter.Len, testCase.args)
 			testCase.checkResult(t, resValue, err)
 		})
 	}
@@ -77,6 +79,7 @@ func TestExecuteType(t *testing.T) {
 			name: "type number",
 			args: []object.JValue{object.NewJNumber(0)},
 			checkResult: func(t *testing.T, resValue object.JValue, err error) {
+				t.Helper()
 				require.NoError(t, err)
 				require.IsType(t, object.NewJString(""), resValue)
 				require.Equal(t, object.Number, resValue.String())
@@ -86,6 +89,7 @@ func TestExecuteType(t *testing.T) {
 			name: "type string",
 			args: []object.JValue{object.NewJString("hello")},
 			checkResult: func(t *testing.T, resValue object.JValue, err error) {
+				t.Helper()
 				require.NoError(t, err)
 				require.IsType(t, object.NewJString(""), resValue)
 				require.Equal(t, object.String, resValue.String())
@@ -95,6 +99,7 @@ func TestExecuteType(t *testing.T) {
 			name: "type list",
 			args: []object.JValue{object.NewJList([]object.JValue{})},
 			checkResult: func(t *testing.T, resValue object.JValue, err error) {
+				t.Helper()
 				require.NoError(t, err)
 				require.IsType(t, object.NewJString(""), resValue)
 				require.Equal(t, object.List, resValue.String())
@@ -104,6 +109,7 @@ func TestExecuteType(t *testing.T) {
 			name: "type function",
 			args: []object.JValue{object.NewJFunction("test_func", []string{}, nil)},
 			checkResult: func(t *testing.T, resValue object.JValue, err error) {
+				t.Helper()
 				require.NoError(t, err)
 				require.IsType(t, object.NewJString(""), resValue)
 				require.Equal(t, object.Function, resValue.String())
@@ -111,8 +117,9 @@ func TestExecuteType(t *testing.T) {
 		},
 		{
 			name: "type built-in function",
-			args: []object.JValue{Type},
+			args: []object.JValue{interpreter.Type},
 			checkResult: func(t *testing.T, resValue object.JValue, err error) {
+				t.Helper()
 				require.NoError(t, err)
 				require.IsType(t, object.NewJString(""), resValue)
 				require.Equal(t, object.BuiltInFunction, resValue.String())
@@ -124,7 +131,7 @@ func TestExecuteType(t *testing.T) {
 		testCase := testCases[i]
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
-			resValue, err := executeType(Type, testCase.args)
+			resValue, err := interpreter.ExecuteType(interpreter.Type, testCase.args)
 			testCase.checkResult(t, resValue, err)
 		})
 	}

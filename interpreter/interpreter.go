@@ -4,8 +4,6 @@ import (
 	"fmt"
 	"reflect"
 
-	"github.com/IfanTsai/jirachi/interpreter/builtin"
-
 	"github.com/IfanTsai/jirachi/interpreter/object"
 
 	"github.com/IfanTsai/jirachi/common"
@@ -15,19 +13,25 @@ import (
 	"github.com/pkg/errors"
 )
 
-var GlobalSymbolTable = common.NewJSymbolTable(nil).
-	Set("NULL", builtin.NULL).
-	Set("TRUE", builtin.TRUE).
-	Set("FALSE", builtin.FALSE).
-	Set("len", builtin.Len).
-	Set("type", builtin.Type).
-	Set("print", builtin.Print).
-	Set("input", builtin.Input).
-	Set("input_number", builtin.InputNumber).
-	Set("is_number", builtin.IsNumber).
-	Set("is_string", builtin.IsString).
-	Set("is_list", builtin.IsList).
-	Set("is_function", builtin.IsFunction)
+var GlobalSymbolTable *common.JSymbolTable
+
+func init() {
+	GlobalSymbolTable = common.NewJSymbolTable(nil).
+		Set("NULL", NULL).
+		Set("TRUE", TRUE).
+		Set("FALSE", FALSE).
+		Set("len", Len).
+		Set("type", Type).
+		Set("print", Print).
+		Set("println", Println).
+		Set("input", Input).
+		Set("input_number", InputNumber).
+		Set("is_number", IsNumber).
+		Set("is_string", IsString).
+		Set("is_list", IsList).
+		Set("is_function", IsFunction).
+		Set("run", RunScript)
+}
 
 func Run(filename, text string) (interface{}, error) {
 	// generate tokens
@@ -49,6 +53,10 @@ func Run(filename, text string) (interface{}, error) {
 		return nil, err
 	}
 
+	if list, ok := resValue.(*object.JList); ok && list.IsAllNil() {
+		return nil, err
+	}
+
 	return resValue, nil
 }
 
@@ -67,6 +75,10 @@ func (i *JInterpreter) Interpreter(ast parser.JNode) (object.JValue, error) {
 }
 
 func (i *JInterpreter) visit(node parser.JNode) (object.JValue, error) {
+	if node == nil {
+		return nil, nil
+	}
+
 	switch node.Type() {
 	case parser.Number:
 		return i.visitNumberNode(node.(*parser.JNumberNode))
@@ -253,6 +265,10 @@ func (i *JInterpreter) visitIfExprNode(node *parser.JIfExprNode) (object.JValue,
 				return nil, err
 			}
 
+			if exprValue == nil {
+				return nil, err
+			}
+
 			return exprValue.SetJContext(i.Context), nil
 		}
 	}
@@ -260,6 +276,10 @@ func (i *JInterpreter) visitIfExprNode(node *parser.JIfExprNode) (object.JValue,
 	if node.ElseCaseNode != nil {
 		elseValue, err := i.visit(node.ElseCaseNode)
 		if err != nil {
+			return nil, err
+		}
+
+		if elseValue == nil {
 			return nil, err
 		}
 

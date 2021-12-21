@@ -55,6 +55,10 @@ func (e *JRunTimeError) Error() string {
 	return e.generateTraceBack() + e.ErrorString("Runtime Error", e.Details)
 }
 
+func (e *JRunTimeError) ErrorWithNoTraceBack() string {
+	return e.ErrorString("Runtime Error", e.Details)
+}
+
 func (e *JRunTimeError) generateTraceBack() string {
 	pos := e.StartPos
 	context := e.Context
@@ -88,9 +92,11 @@ func stringWithArrows(text string, startPos, endPos *JPosition) string {
 	}
 
 	indexEnd := len(text)
-	if startPos.Index+1 <= len(text) {
-		if indexEnd = strings.IndexByte(text[startPos.Index+1:], '\n'); indexEnd == -1 {
+	if indexStart+1 <= len(text) {
+		if indexEnd = strings.IndexByte(text[indexStart+1:], '\n'); indexEnd == -1 {
 			indexEnd = len(text)
+		} else {
+			indexEnd += indexStart + 1
 		}
 	}
 
