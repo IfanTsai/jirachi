@@ -14,6 +14,26 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+func BenchmarkRunFib20(b *testing.B) {
+	source := `
+		fib = FUN(n)
+			IF n <= 2 THEN
+				1
+			ELSE
+				fib(n - 1) + fib(n - 2)
+			END
+		END
+
+		fib(20)
+	`
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_, err := interpreter.Run("<test>", source)
+		require.NoError(b, err)
+	}
+}
+
 func TestJInterpreter_Visit(t *testing.T) {
 	t.Parallel()
 	testCases := []struct {

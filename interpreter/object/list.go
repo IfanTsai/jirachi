@@ -125,11 +125,23 @@ func (l *JList) String() string {
 			strBuilder.WriteString(", ")
 		}
 
-		strBuilder.WriteString(element.String())
+		if element != nil {
+			strBuilder.WriteString(element.String())
+		}
 	}
 	strBuilder.WriteByte(']')
 
 	return strBuilder.String()
+}
+
+func (l *JList) IsAllNil() bool {
+	for index := range l.ElementValues {
+		if l.ElementValues[index] != nil {
+			return false
+		}
+	}
+
+	return true
 }
 
 func (l *JList) deepCopy() *JList {

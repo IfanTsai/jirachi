@@ -15,15 +15,13 @@ func NewJSymbolTable(parent *JSymbolTable) *JSymbolTable {
 }
 
 func (st *JSymbolTable) Get(name interface{}) interface{} {
-	symbols := st.Symbols
+	symbolTable := st
 
-	for {
-		if value, ok := symbols.Get(name); ok {
+	for symbolTable != nil {
+		if value, ok := symbolTable.Symbols.Get(name); ok {
 			return value
-		} else if st.Parent != nil {
-			symbols = st.Parent.Symbols
 		} else {
-			break
+			symbolTable = symbolTable.Parent
 		}
 	}
 

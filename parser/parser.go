@@ -27,7 +27,7 @@ func NewJParser(tokens []*token.JToken, tokenIndex int) *JParser {
 func (p *JParser) Parse() (JNode, error) {
 	p.advance()
 
-	ast, err := p.expr()
+	ast, err := p.statements()
 	if err != nil {
 		return nil, err
 	}
@@ -51,6 +51,13 @@ func (p *JParser) advance() {
 
 func (p *JParser) back() {
 	p.TokenIndex--
+	if p.TokenIndex >= 0 {
+		p.CurrentToken = p.Tokens[p.TokenIndex]
+	}
+}
+
+func (p *JParser) backTo(tokenIndex int) {
+	p.TokenIndex = tokenIndex
 	if p.TokenIndex >= 0 {
 		p.CurrentToken = p.Tokens[p.TokenIndex]
 	}
@@ -169,18 +176,35 @@ func (p *JParser) whileExpr() (JNode, error) {
 
 	p.advance()
 
-	bodyExpr, err := p.expr()
-	if err != nil {
-		return nil, err
+	var body JNode
+
+	if p.CurrentToken.Type == token.NEWLINE {
+		p.advance()
+
+		body, err = p.statements()
+		if err != nil {
+			return nil, err
+		}
+
+		if !p.CurrentToken.Match(token.KEYWORD, token.END) {
+			return nil, p.createInvalidSyntaxError(fmt.Sprintf("'%s'", token.END), "while expression")
+		}
+
+		p.advance()
+	} else {
+		body, err = p.expr()
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	return &JWhileExprNode{
 		JBaseNode: &JBaseNode{
 			StartPos: conditionExpr.GetStartPos(),
-			EndPos:   bodyExpr.GetEndPos(),
+			EndPos:   body.GetEndPos(),
 		},
 		ConditionNode: conditionExpr,
-		BodyNode:      bodyExpr,
+		BodyNode:      body,
 	}, nil
 }
 
@@ -237,51 +261,45 @@ func (p *JParser) forExpr() (JNode, error) {
 
 	p.advance()
 
-	bodyExpr, err := p.expr()
-	if err != nil {
-		return nil, err
+	var body JNode
+
+	if p.CurrentToken.Type == token.NEWLINE {
+		p.advance()
+
+		body, err = p.statements()
+		if err != nil {
+			return nil, err
+		}
+
+		if !p.CurrentToken.Match(token.KEYWORD, token.END) {
+			return nil, p.createInvalidSyntaxError(fmt.Sprintf("'%s'", token.END), "for expression")
+		}
+
+		p.advance()
+	} else {
+		body, err = p.expr()
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	return &JForExprNode{
 		JBaseNode: &JBaseNode{
 			Token:    varNameToken,
 			StartPos: varNameToken.StartPos,
-			EndPos:   bodyExpr.GetEndPos(),
+			EndPos:   body.GetEndPos(),
 		},
 		StartValueNode: startEXpr,
 		EndValueNode:   endExpr,
 		StepValueNode:  stepExpr,
-		BodyNode:       bodyExpr,
+		BodyNode:       body,
 	}, nil
 }
 
 func (p *JParser) ifExpr() (JNode, error) {
-	if !p.CurrentToken.Match(token.KEYWORD, token.IF) {
-		return nil, p.createInvalidSyntaxError(fmt.Sprintf("'%s'", token.IF), "if expression")
-	}
-
-	var elseCase JNode
-	cases := make([][2]JNode, 0, 3)
-
-	cases, err := p.parseElifThenExpr(cases)
+	cases, elseCase, err := p.parseIfExprCases(token.IF)
 	if err != nil {
 		return nil, err
-	}
-
-	for p.CurrentToken.Match(token.KEYWORD, token.ELIF) {
-		cases, err = p.parseElifThenExpr(cases)
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	if p.CurrentToken.Match(token.KEYWORD, token.ELSE) {
-		p.advance()
-
-		elseCase, err = p.expr()
-		if err != nil {
-			return nil, err
-		}
 	}
 
 	var endPos *common.JPosition
@@ -299,6 +317,115 @@ func (p *JParser) ifExpr() (JNode, error) {
 		CaseNodes:    cases,
 		ElseCaseNode: elseCase,
 	}, nil
+}
+
+func (p *JParser) elifExpr() ([][2]JNode, JNode, error) {
+	return p.parseIfExprCases(token.ELIF)
+}
+
+func (p *JParser) elseExpr() (JNode, error) {
+	var err error
+	var elseCase JNode
+
+	if !p.CurrentToken.Match(token.KEYWORD, token.ELSE) {
+		return nil, err
+	}
+
+	p.advance()
+
+	if p.CurrentToken.Type == token.NEWLINE {
+		elseCase, err = p.statements()
+		if err != nil {
+			return nil, err
+		}
+
+		if !p.CurrentToken.Match(token.KEYWORD, token.END) {
+			return nil, p.createInvalidSyntaxError(fmt.Sprintf("'%s'", token.END), "else if expression")
+		}
+
+		p.advance()
+	} else {
+		elseCase, err = p.expr()
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return elseCase, nil
+}
+
+func (p *JParser) parseElifOrElseExpr() ([][2]JNode, JNode, error) {
+	if p.CurrentToken.Match(token.KEYWORD, token.ELIF) {
+		return p.elifExpr()
+	} else if p.CurrentToken.Match(token.KEYWORD, token.ELSE) {
+		elseCase, err := p.elseExpr()
+
+		return nil, elseCase, err
+	}
+
+	return nil, nil, nil
+}
+
+func (p *JParser) parseIfExprCases(caseKeyword string) ([][2]JNode, JNode, error) {
+	if !p.CurrentToken.Match(token.KEYWORD, caseKeyword) {
+		return nil, nil, p.createInvalidSyntaxError(fmt.Sprintf("'%s'", caseKeyword), "case expression")
+	}
+
+	p.advance()
+
+	var cases [][2]JNode
+
+	condition, err := p.expr()
+	if err != nil {
+		return nil, nil, err
+	}
+
+	if !p.CurrentToken.Match(token.KEYWORD, token.THEN) {
+		return nil, nil, p.createInvalidSyntaxError(fmt.Sprintf("'%s'", token.THEN), "case expression")
+	}
+
+	p.advance()
+
+	var elseCase JNode
+	var newCases [][2]JNode
+
+	if p.CurrentToken.Type == token.NEWLINE {
+		p.advance()
+
+		statementNodes, err := p.statements()
+		if err != nil {
+			return nil, nil, err
+		}
+
+		cases = append(cases, [2]JNode{condition, statementNodes})
+
+		if p.CurrentToken.Match(token.KEYWORD, token.END) {
+			p.advance()
+		} else {
+			newCases, elseCase, err = p.parseElifOrElseExpr()
+			if err != nil {
+				return nil, nil, err
+			}
+
+			cases = append(cases, newCases...)
+		}
+	} else {
+		expr, err := p.expr()
+		if err != nil {
+			return nil, nil, err
+		}
+
+		cases = append(cases, [2]JNode{condition, expr})
+
+		newCases, elseCase, err = p.parseElifOrElseExpr()
+		if err != nil {
+			return nil, nil, err
+		}
+
+		cases = append(cases, newCases...)
+	}
+
+	return cases, elseCase, nil
 }
 
 func (p *JParser) funcDef() (JNode, error) {
@@ -346,15 +473,31 @@ func (p *JParser) funcDef() (JNode, error) {
 
 	p.advance()
 
-	if p.CurrentToken.Type != token.ARROW {
-		return nil, p.createInvalidSyntaxError("'->'", "function definition")
-	}
+	var body JNode
+	var err error
 
-	p.advance()
+	if p.CurrentToken.Type == token.ARROW {
+		p.advance()
 
-	bodyNode, err := p.expr()
-	if err != nil {
-		return nil, err
+		body, err = p.expr()
+		if err != nil {
+			return nil, err
+		}
+	} else if p.CurrentToken.Type == token.NEWLINE {
+		p.advance()
+
+		body, err = p.statements()
+		if err != nil {
+			return nil, err
+		}
+
+		if !p.CurrentToken.Match(token.KEYWORD, token.END) {
+			return nil, p.createInvalidSyntaxError(fmt.Sprintf("'%s'", token.END), "function definition expression")
+		}
+
+		p.advance()
+	} else {
+		return nil, p.createInvalidSyntaxError("'->' or NEWLINE", "function definition expression")
 	}
 
 	return &JFuncDefNode{
@@ -362,7 +505,7 @@ func (p *JParser) funcDef() (JNode, error) {
 			Token: varNameToken,
 		},
 		ArgTokens: argTokens,
-		BodyNode:  bodyNode,
+		BodyNode:  body,
 	}, nil
 }
 
@@ -435,7 +578,7 @@ func (p *JParser) atom() (JNode, error) {
 		}
 	}
 
-	return nil, p.createInvalidSyntaxError("number, identifier, '+', '-', '(', '[' or 'NOT'", "factor")
+	return nil, p.createInvalidSyntaxError("number, identifier, '(', '[' or 'NOT'", "factor")
 }
 
 func (p *JParser) call() (JNode, error) {
@@ -593,6 +736,58 @@ func (p *JParser) expr() (JNode, error) {
 	return p.binOp(p.compareExpr, set.NewSet(token.AND, token.OR), nil)
 }
 
+func (p *JParser) statements() (JNode, error) {
+	startPos := p.CurrentToken.StartPos.Copy()
+
+	for p.CurrentToken.Type == token.NEWLINE {
+		p.advance()
+	}
+
+	var err error
+	var statementNode JNode
+	var statementNodes []JNode
+
+	statementNode, err = p.expr()
+	if err != nil {
+		return nil, err
+	}
+	statementNodes = append(statementNodes, statementNode)
+
+	moreStatements := false
+	for {
+		for p.CurrentToken.Type == token.NEWLINE {
+			p.advance()
+			moreStatements = true
+		}
+
+		if !moreStatements || p.CurrentToken.Type == token.EOF {
+			break
+		}
+
+		tokenIndex := p.TokenIndex
+		statementNode, err = p.expr()
+		if err != nil {
+			p.backTo(tokenIndex)
+
+			break
+		}
+
+		statementNodes = append(statementNodes, statementNode)
+	}
+
+	if len(statementNodes) == 1 {
+		return statementNodes[0], nil
+	}
+
+	return &JListNode{
+		JBaseNode: &JBaseNode{
+			StartPos: startPos,
+			EndPos:   statementNodes[len(statementNodes)-1].GetEndPos(),
+		},
+		ElementNodes: statementNodes,
+	}, nil
+}
+
 func (p *JParser) binOp(getNodeFuncA getNodeFunc, ops *set.Set, getNodeFuncB getNodeFunc) (JNode, error) {
 	if getNodeFuncB == nil {
 		getNodeFuncB = getNodeFuncA
@@ -625,30 +820,6 @@ func (p *JParser) binOp(getNodeFuncA getNodeFunc, ops *set.Set, getNodeFuncB get
 	}
 
 	return leftNode, nil
-}
-
-func (p *JParser) parseElifThenExpr(cases [][2]JNode) ([][2]JNode, error) {
-	p.advance()
-
-	condition, err := p.expr()
-	if err != nil {
-		return nil, err
-	}
-
-	if !p.CurrentToken.Match(token.KEYWORD, token.THEN) {
-		return nil, p.createInvalidSyntaxError(fmt.Sprintf("'%s'", token.THEN), "if expression")
-	}
-
-	p.advance()
-
-	expr, err := p.expr()
-	if err != nil {
-		return nil, err
-	}
-
-	cases = append(cases, [2]JNode{condition, expr})
-
-	return cases, nil
 }
 
 func (p *JParser) createInvalidSyntaxError(expected, parseType string) error {
