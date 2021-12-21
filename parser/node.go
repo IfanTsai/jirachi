@@ -112,7 +112,7 @@ func (l *JListNode) String() string {
 	return strBuilder.String()
 }
 
-// JIndexExprNode is index expression node structrue of AST
+// JIndexExprNode is index expression node structure of AST
 type JIndexExprNode struct {
 	*JBaseNode
 	IndexNode JNode

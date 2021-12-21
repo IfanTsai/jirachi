@@ -2,6 +2,9 @@ package repl
 
 import (
 	"fmt"
+	"strings"
+
+	"github.com/IfanTsai/jirachi/token"
 
 	"github.com/pkg/errors"
 
@@ -12,22 +15,24 @@ import (
 var Release string
 
 var completer = readline.NewPrefixCompleter(
-	readline.PcItem("AND"),
-	readline.PcItem("OR"),
-	readline.PcItem("NOT"),
-	readline.PcItem("IF"),
-	readline.PcItem("THEN"),
-	readline.PcItem("ELIF"),
-	readline.PcItem("ELSE"),
-	readline.PcItem("FOR",
-		readline.PcItem("i = 0", readline.PcItem("TO 10",
-			readline.PcItem("STEP 1",
-				readline.PcItem("THEN"),
+	readline.PcItem(token.AND),
+	readline.PcItem(token.OR),
+	readline.PcItem(token.NOT),
+	readline.PcItem(token.IF),
+	readline.PcItem(token.THEN),
+	readline.PcItem(token.ELIF),
+	readline.PcItem(token.ELSE),
+	readline.PcItem(token.END),
+	readline.PcItem(token.FOR,
+		readline.PcItem("i = 0", readline.PcItem(token.TO+" 10",
+			readline.PcItem(token.STEP+" 1",
+				readline.PcItem(token.THEN),
 			),
-			readline.PcItem("THEN")),
+			readline.PcItem(token.THEN)),
 		),
 	),
-	readline.PcItem("WHILE"),
+	readline.PcItem(token.WHILE),
+	readline.PcItem(token.FUN),
 )
 
 func Run() {
@@ -52,6 +57,8 @@ func Run() {
 
 			break
 		}
+
+		line = strings.TrimSpace(line)
 
 		if len(line) == 0 {
 			continue
