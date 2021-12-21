@@ -35,6 +35,7 @@ const (
 	GTE        JTokenType = "GTE"     // >=
 	COMMA      JTokenType = "COMMA"   // ,
 	ARROW      JTokenType = "ARROW"   // ->
+	NEWLINE    JTokenType = "NEWLINE"
 	EOF        JTokenType = "EOF"
 )
 
@@ -51,6 +52,7 @@ const (
 	STEP  = "STEP"
 	WHILE = "WHILE"
 	FUN   = "FUN"
+	END   = "END"
 )
 
 var KEYWORDS = set.NewSet(
@@ -66,6 +68,7 @@ var KEYWORDS = set.NewSet(
 	STEP,
 	WHILE,
 	FUN,
+	END,
 )
 
 type JToken struct {

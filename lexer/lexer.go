@@ -40,6 +40,9 @@ func (l *JLexer) MakeTokens() ([]*token.JToken, error) {
 		switch {
 		case char == ' ' || char == '\t':
 			advanceAble = l.advance()
+		case char == ';' || char == '\n':
+			tokens = append(tokens, token.NewJToken(token.NEWLINE, nil, l.Pos, l.Pos))
+			advanceAble = l.advance()
 		case isDigit(char):
 			tok, advanceAble, err = l.makeNumberToken()
 			if err != nil {
