@@ -27,6 +27,9 @@ const (
 	FuncDefExpr
 	CallExpr
 	IndexExpr
+	ReturnExpr
+	ContinueExpr
+	BreakExpr
 )
 
 // JNode is general node interface of AST
@@ -90,7 +93,8 @@ func (s *JStringNode) Type() JNodeType {
 // JListNode is list node structure of AST
 type JListNode struct {
 	*JBaseNode
-	ElementNodes []JNode
+	ElementNodes      []JNode
+	IsBlockStatements bool
 }
 
 func (l *JListNode) Type() JNodeType {
@@ -210,11 +214,12 @@ func (n *JIfExprNode) Type() JNodeType {
 
 // JForExprNode is for expression node structure of AST
 type JForExprNode struct {
-	*JBaseNode     // JBaseNode.Token is variable name token
-	StartValueNode JNode
-	EndValueNode   JNode
-	StepValueNode  JNode
-	BodyNode       JNode
+	*JBaseNode        // JBaseNode.Token is variable name token
+	StartValueNode    JNode
+	EndValueNode      JNode
+	StepValueNode     JNode
+	BodyNode          JNode
+	IsBlockStatements bool
 }
 
 func (n *JForExprNode) Type() JNodeType {
@@ -224,8 +229,9 @@ func (n *JForExprNode) Type() JNodeType {
 // JWhileExprNode is while expression node structure of AST
 type JWhileExprNode struct {
 	*JBaseNode
-	ConditionNode JNode
-	BodyNode      JNode
+	ConditionNode     JNode
+	BodyNode          JNode
+	IsBlockStatements bool
 }
 
 func (n *JWhileExprNode) Type() JNodeType {
@@ -295,4 +301,41 @@ func (n *JCallExprNode) String() string {
 	strBuilder.WriteByte(')')
 
 	return strBuilder.String()
+}
+
+type JReturnNode struct {
+	*JBaseNode
+	ReturnNode JNode
+}
+
+func (n *JReturnNode) Type() JNodeType {
+	return ReturnExpr
+}
+
+func (n *JReturnNode) String() string {
+	return n.Token.String() + " " + n.ReturnNode.String()
+}
+
+type JContinueNode struct {
+	*JBaseNode
+}
+
+func (n *JContinueNode) Type() JNodeType {
+	return ContinueExpr
+}
+
+func (n *JContinueNode) String() string {
+	return n.Token.String()
+}
+
+type JBreakNode struct {
+	*JBaseNode
+}
+
+func (n *JBreakNode) Type() JNodeType {
+	return BreakExpr
+}
+
+func (n *JBreakNode) String() string {
+	return n.Token.String()
 }

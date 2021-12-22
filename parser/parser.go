@@ -27,7 +27,7 @@ func NewJParser(tokens []*token.JToken, tokenIndex int) *JParser {
 func (p *JParser) Parse() (JNode, error) {
 	p.advance()
 
-	ast, err := p.statements()
+	ast, err := p.statements(false)
 	if err != nil {
 		return nil, err
 	}
@@ -177,11 +177,13 @@ func (p *JParser) whileExpr() (JNode, error) {
 	p.advance()
 
 	var body JNode
+	isBlock := false
 
 	if p.CurrentToken.Type == token.NEWLINE {
+		isBlock = true
 		p.advance()
 
-		body, err = p.statements()
+		body, err = p.statements(true)
 		if err != nil {
 			return nil, err
 		}
@@ -192,7 +194,7 @@ func (p *JParser) whileExpr() (JNode, error) {
 
 		p.advance()
 	} else {
-		body, err = p.expr()
+		body, err = p.statement()
 		if err != nil {
 			return nil, err
 		}
@@ -203,8 +205,9 @@ func (p *JParser) whileExpr() (JNode, error) {
 			StartPos: conditionExpr.GetStartPos(),
 			EndPos:   body.GetEndPos(),
 		},
-		ConditionNode: conditionExpr,
-		BodyNode:      body,
+		ConditionNode:     conditionExpr,
+		BodyNode:          body,
+		IsBlockStatements: isBlock,
 	}, nil
 }
 
@@ -262,11 +265,13 @@ func (p *JParser) forExpr() (JNode, error) {
 	p.advance()
 
 	var body JNode
+	isBlock := false
 
 	if p.CurrentToken.Type == token.NEWLINE {
+		isBlock = true
 		p.advance()
 
-		body, err = p.statements()
+		body, err = p.statements(true)
 		if err != nil {
 			return nil, err
 		}
@@ -277,7 +282,7 @@ func (p *JParser) forExpr() (JNode, error) {
 
 		p.advance()
 	} else {
-		body, err = p.expr()
+		body, err = p.statement()
 		if err != nil {
 			return nil, err
 		}
@@ -289,10 +294,11 @@ func (p *JParser) forExpr() (JNode, error) {
 			StartPos: varNameToken.StartPos,
 			EndPos:   body.GetEndPos(),
 		},
-		StartValueNode: startEXpr,
-		EndValueNode:   endExpr,
-		StepValueNode:  stepExpr,
-		BodyNode:       body,
+		StartValueNode:    startEXpr,
+		EndValueNode:      endExpr,
+		StepValueNode:     stepExpr,
+		BodyNode:          body,
+		IsBlockStatements: isBlock,
 	}, nil
 }
 
@@ -334,7 +340,7 @@ func (p *JParser) elseExpr() (JNode, error) {
 	p.advance()
 
 	if p.CurrentToken.Type == token.NEWLINE {
-		elseCase, err = p.statements()
+		elseCase, err = p.statements(true)
 		if err != nil {
 			return nil, err
 		}
@@ -345,7 +351,7 @@ func (p *JParser) elseExpr() (JNode, error) {
 
 		p.advance()
 	} else {
-		elseCase, err = p.expr()
+		elseCase, err = p.statement()
 		if err != nil {
 			return nil, err
 		}
@@ -392,7 +398,7 @@ func (p *JParser) parseIfExprCases(caseKeyword string) ([][2]JNode, JNode, error
 	if p.CurrentToken.Type == token.NEWLINE {
 		p.advance()
 
-		statementNodes, err := p.statements()
+		statementNodes, err := p.statements(true)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -410,7 +416,7 @@ func (p *JParser) parseIfExprCases(caseKeyword string) ([][2]JNode, JNode, error
 			cases = append(cases, newCases...)
 		}
 	} else {
-		expr, err := p.expr()
+		expr, err := p.statement()
 		if err != nil {
 			return nil, nil, err
 		}
@@ -486,7 +492,7 @@ func (p *JParser) funcDef() (JNode, error) {
 	} else if p.CurrentToken.Type == token.NEWLINE {
 		p.advance()
 
-		body, err = p.statements()
+		body, err = p.statements(true)
 		if err != nil {
 			return nil, err
 		}
@@ -736,8 +742,63 @@ func (p *JParser) expr() (JNode, error) {
 	return p.binOp(p.compareExpr, set.NewSet(token.AND, token.OR), nil)
 }
 
-func (p *JParser) statements() (JNode, error) {
-	startPos := p.CurrentToken.StartPos.Copy()
+func (p *JParser) statement() (JNode, error) {
+	currentToken := p.CurrentToken
+
+	if currentToken.IsKeyWord() {
+		switch p.CurrentToken.Value {
+		case token.RETURN:
+			p.advance()
+
+			tokenIndex := p.TokenIndex
+			expr, err := p.expr()
+			if err != nil {
+				p.backTo(tokenIndex)
+			}
+
+			var endPos *common.JPosition
+			if expr == nil {
+				endPos = currentToken.EndPos
+			} else {
+				endPos = expr.GetEndPos()
+			}
+
+			return &JReturnNode{
+				JBaseNode: &JBaseNode{
+					Token:    currentToken,
+					StartPos: currentToken.StartPos,
+					EndPos:   endPos,
+				},
+				ReturnNode: expr,
+			}, nil
+		case token.BREAK:
+			p.advance()
+
+			return &JBreakNode{
+				JBaseNode: &JBaseNode{
+					Token:    currentToken,
+					StartPos: currentToken.StartPos,
+					EndPos:   currentToken.EndPos,
+				},
+			}, nil
+		case token.CONTINUE:
+			p.advance()
+
+			return &JContinueNode{
+				JBaseNode: &JBaseNode{
+					Token:    currentToken,
+					StartPos: currentToken.StartPos,
+					EndPos:   p.CurrentToken.EndPos,
+				},
+			}, nil
+		}
+	}
+
+	return p.expr()
+}
+
+func (p *JParser) statements(isBlock bool) (JNode, error) {
+	startPos := p.CurrentToken.StartPos
 
 	for p.CurrentToken.Type == token.NEWLINE {
 		p.advance()
@@ -747,7 +808,7 @@ func (p *JParser) statements() (JNode, error) {
 	var statementNode JNode
 	var statementNodes []JNode
 
-	statementNode, err = p.expr()
+	statementNode, err = p.statement()
 	if err != nil {
 		return nil, err
 	}
@@ -765,7 +826,7 @@ func (p *JParser) statements() (JNode, error) {
 		}
 
 		tokenIndex := p.TokenIndex
-		statementNode, err = p.expr()
+		statementNode, err = p.statement()
 		if err != nil {
 			p.backTo(tokenIndex)
 
@@ -784,7 +845,8 @@ func (p *JParser) statements() (JNode, error) {
 			StartPos: startPos,
 			EndPos:   statementNodes[len(statementNodes)-1].GetEndPos(),
 		},
-		ElementNodes: statementNodes,
+		ElementNodes:      statementNodes,
+		IsBlockStatements: isBlock,
 	}, nil
 }
 
