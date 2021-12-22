@@ -16,13 +16,13 @@ import (
 
 func BenchmarkRunFib20(b *testing.B) {
 	source := `
-		fib = FUN(n)
-			IF n <= 2 THEN
+		fib = fun(n)
+			if n <= 2 then
 				1
-			ELSE
+			else
 				fib(n - 1) + fib(n - 2)
-			END
-		END
+			end
+		end
 
 		fib(20)
 	`
@@ -44,7 +44,7 @@ func TestRun(t *testing.T) {
 		{
 			name: "single line",
 			source: `
-				FUN test() -> FOR i = 1 TO 10 THEN IF i == 6 THEN i ELSE i + 1
+				fun test() -> for i = 1 to 10 then if i == 6 then i else i + 1
 				
 				a = test()
 			`,
@@ -60,19 +60,18 @@ func TestRun(t *testing.T) {
 		{
 			name: "break",
 			source: `
-				FUN test() 
+				fun test()
 					res = []
-					FOR i = 1 TO 10 THEN
-						IF i == 6 THEN 
-							BREAK
-						ELSE
+					for i = 1 to 10 then
+						if i == 6 then
+							break
+						else
 							res = res + i
-						END
-					END
+						end
+					end
 
-					RETURN res
-				END
-				
+					return res
+				end
 				
 				a = test()
 			`,
@@ -88,19 +87,18 @@ func TestRun(t *testing.T) {
 		{
 			name: "continue",
 			source: `
-				FUN test() 
+				fun test()
 					res = []
-					FOR i = 1 TO 10 THEN
-						IF i == 6 THEN 
-							CONTINUE	
-						ELSE
+					for i = 1 to 10 then
+						if i == 6 then
+							continue
+						else
 							res = res + i
-						END
-					END
+						end
+					end
 
-					RETURN res
-				END
-				
+					return res
+				end
 				
 				a = test()
 			`,
@@ -116,17 +114,17 @@ func TestRun(t *testing.T) {
 		{
 			name: "return",
 			source: `
-				FUN test(list) 
-					FOR i = 1 TO 10 THEN
-						IF i == 6 THEN 
-							RETURN
-						ELSE
+				fun test(list)
+					for i = 1 to 10 then
+						if i == 6 then
+							return
+						else
 							list[i] = list[i] * 2
-						END
-					END
-				END
+						end
+					end
+				end
 				
-				list = FOR i = 0 TO 10 THEN i
+				list = for i = 0 to 10 then i
 				test(list)	
 			`,
 			checkResult: func(t *testing.T, resValue interface{}, err error) {
@@ -238,7 +236,7 @@ func TestJInterpreter_Visit(t *testing.T) {
 		},
 		{
 			name: "OK6: logical operation",
-			text: "5 - 5 OR 1 + 2 AND (NOT 0 AND 10) - 2 * 5",
+			text: "5 - 5 or 1 + 2 and (not 0 and 10) - 2 * 5",
 			checkResult: func(t *testing.T, number object.JValue, err error) {
 				t.Helper()
 				require.NoError(t, err)
@@ -248,7 +246,7 @@ func TestJInterpreter_Visit(t *testing.T) {
 		},
 		{
 			name: "OK7: logical operation",
-			text: "5 - 5 OR 1 + 2 AND NOT 0 AND 10 - 2 * 5",
+			text: "5 - 5 or 1 + 2 and not 0 and 10 - 2 * 5",
 			checkResult: func(t *testing.T, number object.JValue, err error) {
 				t.Helper()
 				require.NoError(t, err)
@@ -258,7 +256,7 @@ func TestJInterpreter_Visit(t *testing.T) {
 		},
 		{
 			name: "OK8: comparison operation",
-			text: " (3 > 2) OR 1 + 2 AND NOT 0 AND 10 - 2 * 5 AND (5 - 5 == 0)",
+			text: " (3 > 2) or 1 + 2 and not 0 and 10 - 2 * 5 and (5 - 5 == 0)",
 			checkResult: func(t *testing.T, number object.JValue, err error) {
 				t.Helper()
 				require.NoError(t, err)
@@ -268,7 +266,7 @@ func TestJInterpreter_Visit(t *testing.T) {
 		},
 		{
 			name: "OK9: if expression",
-			text: "IF 5 > 3 THEN 4 ELSE 5",
+			text: "if 5 > 3 then 4 else 5",
 			checkResult: func(t *testing.T, number object.JValue, err error) {
 				t.Helper()
 				require.NoError(t, err)
@@ -278,7 +276,7 @@ func TestJInterpreter_Visit(t *testing.T) {
 		},
 		{
 			name: "OK10: if expression",
-			text: "IF 5 < 3 THEN 4 ELSE 5",
+			text: "if 5 < 3 then 4 else 5",
 			checkResult: func(t *testing.T, number object.JValue, err error) {
 				t.Helper()
 				require.NoError(t, err)
@@ -288,7 +286,7 @@ func TestJInterpreter_Visit(t *testing.T) {
 		},
 		{
 			name: "OK11: if expression",
-			text: "IF 5 > 6 THEN 4 ELIF 5 > 4 THEN 6 ELSE 5",
+			text: "if 5 > 6 then 4 elif 5 > 4 then 6 else 5",
 			checkResult: func(t *testing.T, number object.JValue, err error) {
 				t.Helper()
 				require.NoError(t, err)
@@ -298,7 +296,7 @@ func TestJInterpreter_Visit(t *testing.T) {
 		},
 		{
 			name: "OK12: if expression",
-			text: "IF 5 == 6 THEN 4",
+			text: "if 5 == 6 then 4",
 			checkResult: func(t *testing.T, number object.JValue, err error) {
 				t.Helper()
 				require.NoError(t, err)
@@ -308,7 +306,7 @@ func TestJInterpreter_Visit(t *testing.T) {
 		},
 		{
 			name: "OK13: for expression, default step",
-			text: "FOR i = 1 TO 6 THEN res13 = res13 * i",
+			text: "for i = 1 to 6 then res13 = res13 * i",
 			preRun: func(t *testing.T) {
 				t.Helper()
 
@@ -327,7 +325,7 @@ func TestJInterpreter_Visit(t *testing.T) {
 		},
 		{
 			name: "OK14: for expression, step = -1",
-			text: "FOR i = 5 TO 0 STEP -1 THEN res14 = res14 * i",
+			text: "for i = 5 to 0 step -1 then res14 = res14 * i",
 			preRun: func(t *testing.T) {
 				t.Helper()
 
@@ -346,7 +344,7 @@ func TestJInterpreter_Visit(t *testing.T) {
 		},
 		{
 			name: "OK15: while expression",
-			text: "WHILE res15 < 10000 THEN res15 = res15 + 1",
+			text: "while res15 < 10000 then res15 = res15 + 1",
 			preRun: func(t *testing.T) {
 				t.Helper()
 
@@ -369,7 +367,7 @@ func TestJInterpreter_Visit(t *testing.T) {
 			preRun: func(t *testing.T) {
 				t.Helper()
 
-				assignVariable(t, "add = FUN(a, b) -> a + b")
+				assignVariable(t, "add = fun(a, b) -> a + b")
 			},
 			checkResult: func(t *testing.T, number object.JValue, err error) {
 				t.Helper()

@@ -17,9 +17,9 @@ var GlobalSymbolTable *common.JSymbolTable
 
 func init() {
 	GlobalSymbolTable = common.NewJSymbolTable(nil).
-		Set("NULL", NULL).
-		Set("TRUE", TRUE).
-		Set("FALSE", FALSE).
+		Set("null", NULL).
+		Set("true", TRUE).
+		Set("false", FALSE).
 		Set("len", Len).
 		Set("type", Type).
 		Set("print", Print).
@@ -318,7 +318,7 @@ func (i *JInterpreter) visitIfExprNode(node *parser.JIfExprNode) (object.JValue,
 		return elseValue.SetJContext(i.Context), nil
 	}
 
-	// eg. IF false THEN 123
+	// eg. if false then 123
 	return object.NewJNumber(nil), nil
 }
 

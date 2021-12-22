@@ -91,7 +91,7 @@ func TestJParser_Parse(t *testing.T) {
 		},
 		{
 			name: "Invalid Syntax5",
-			text: "(5 - 5) OR (1 + 2) AND NOT 0 NOT 1",
+			text: "(5 - 5) or (1 + 2) and not 0 not 1",
 			checkResult: func(t *testing.T, node parser.JNode, err error) {
 				t.Helper()
 				require.Error(t, err)

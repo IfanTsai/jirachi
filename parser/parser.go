@@ -34,7 +34,7 @@ func (p *JParser) Parse() (JNode, error) {
 
 	if p.CurrentToken.Type != token.EOF {
 		return nil, p.createInvalidSyntaxError(
-			"number, identifier, '+', '-', '(', '[', 'IF', 'FOR', 'WHILE', '*', '/' or '^'",
+			"number, identifier, '+', '-', '(', '[', 'if', 'for', 'while', '*', '/' or '^'",
 			"expression",
 		)
 	}
@@ -126,7 +126,7 @@ func (p *JParser) listExpr() (JNode, error) {
 		expr, err := p.expr()
 		if err != nil {
 			return nil, p.createInvalidSyntaxError(
-				"Expected ']', 'IF', 'FOR', 'WHILE', 'FUN', int, float, identifier, '+', '-', '(', '[', or 'NOT'",
+				"Expected ']', 'if', 'for', 'while', 'fun', number, identifier, '+', '-', '(', '[', or 'not'",
 				"list expression",
 			)
 		}
@@ -603,7 +603,7 @@ func (p *JParser) call() (JNode, error) {
 			expr, err := p.expr()
 			if err != nil {
 				return nil, p.createInvalidSyntaxError(
-					"Expected ')', 'IF', 'FOR', 'WHILE', 'FUN', int, float, identifier, '+', '-', '(', '[' or 'NOT'",
+					"Expected ')', 'if', 'for', 'while', 'fun', number, identifier, '+', '-', '(', '[' or 'not'",
 					"call expression",
 				)
 			}

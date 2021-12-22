@@ -1,60 +1,60 @@
 #!/usr/local/bin/jirachi
 
 # loop
-FUN fib1(n)
+fun fib1(n)
     # list comprehension: res = [1, 1, 1]
-    res = FOR i = 0 TO 3 THEN 1
+    res = for i = 0 to 3 then 1
 
-    FOR i = 3 TO n + 1 THEN
+    for i = 3 to n + 1 then
         res = res + (res[i - 1] + res[i - 2])
-    END
+    end
 
-    RETURN res[n]  # can remove the RETURN keyword
-END
+    return res[n]  # can remove the return keyword
+end
 
 # recursion
-fib2 = FUN(n)      # anonymous function
-    IF n <= 2 THEN
+fib2 = fun(n)      # anonymous function
+    if n <= 2 then
         1
-    ELSE
+    else
         fib2(n - 1) + fib2(n - 2)
-    END
-END
+    end
+end
 
-fib3 = FUN(n)
-    IF n <= 2 THEN
-        RETURN 1
-    END
+fib3 = fun(n)
+    if n <= 2 then
+        return 1
+    end
 
     f1 = 1
     f2 = 1
     f3 = 0
 
-    RETURN FOR i = 3 TO n + 1 THEN  # return final expression value
+    return for i = 3 to n + 1 then # return final expression value
         f3 = f1 + f2
         f1 = f2
         f2 = f3
-    END
-END
+    end
+end
 
-num2str = FUN(number) -> '' + number  # lambda
+num2str = fun(number) -> '' + number  # lambda
 
-print_fib_values = FUN(fib_fun, n)    # higher order function
+print_fib_values = fun(fib_fun, n)    # higher order function
     print('fibonacci value is ')
 
-    FOR i = 1 TO n + 1 THEN
+    for i = 1 to n + 1 then
         res = fib_fun(i)
         print(num2str(res) + ' ')
-    END
+    end
 
     println('')
-END
+end
 
-WHILE TRUE THEN
+while true then
     println('please input number:')
 
     n = input_number()
     print_fib_values(fib1, n)
     print_fib_values(fib2, n)
     print_fib_values(fib3, n)
-END
+end
