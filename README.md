@@ -8,27 +8,17 @@ The plan supports the following features:
 
 - [x] Arithmetic Operations (+, -, *, /, ^)
 - [x] Comparison Operation (==, !=, >, >=, <, <=)
-- [x] Logical Operation (NOT, AND, OR)
+- [x] Logical Operation (not, and, or)
 - [x] Variable
-- [x] Judgment Branch Statement (IF ... THEN ... ELIF ... ELSE ...)
-- [x] Loop Statement (FOR, WHILE)
+- [x] Judgment Branch Statement (if ... then ... elif ... else ... end)
+- [x] Loop Statement (for, while)
 - [x] Function
 - [x] String
 - [x] List
 - [ ] Map
 - [x] Built-in Functions
-- [x] Branch Control Statement (BREAK, CONTINUE, RETURN)
+- [x] Branch Control Statement (break, continue, return)
 - [x] Comment
 - [ ] File IO
 - [ ] Network IO
 - [ ] Coroutine
-
-
-
-Example:
-
-<img src="https://img.caiyifan.cn/typora_picgo/image-20211204175744657.png" alt="image-20211204175744657" style="zoom:80%;" /> 
-
-
-
-<img src="https://img.caiyifan.cn/typora_picgo/image-20211218194626852.png" alt="image-20211218194626852" style="zoom:80%;" />
