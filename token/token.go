@@ -40,19 +40,22 @@ const (
 )
 
 const (
-	AND   = "AND"
-	OR    = "OR"
-	NOT   = "NOT"
-	IF    = "IF"
-	THEN  = "THEN"
-	ELIF  = "ELIF"
-	ELSE  = "ELSE"
-	FOR   = "FOR"
-	TO    = "TO"
-	STEP  = "STEP"
-	WHILE = "WHILE"
-	FUN   = "FUN"
-	END   = "END"
+	AND      = "AND"
+	OR       = "OR"
+	NOT      = "NOT"
+	IF       = "IF"
+	THEN     = "THEN"
+	ELIF     = "ELIF"
+	ELSE     = "ELSE"
+	FOR      = "FOR"
+	TO       = "TO"
+	STEP     = "STEP"
+	WHILE    = "WHILE"
+	FUN      = "FUN"
+	END      = "END"
+	RETURN   = "RETURN"
+	BREAK    = "BREAK"
+	CONTINUE = "CONTINUE"
 )
 
 var KEYWORDS = set.NewSet(
@@ -69,6 +72,9 @@ var KEYWORDS = set.NewSet(
 	WHILE,
 	FUN,
 	END,
+	RETURN,
+	BREAK,
+	CONTINUE,
 )
 
 type JToken struct {
@@ -91,6 +97,10 @@ func NewJToken(tokenType JTokenType, value interface{}, startPos, endPos *common
 	}
 
 	return token
+}
+
+func (t *JToken) IsKeyWord() bool {
+	return t.Type == KEYWORD
 }
 
 func (t *JToken) Match(typ JTokenType, value interface{}) bool {

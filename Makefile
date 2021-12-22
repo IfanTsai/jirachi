@@ -8,5 +8,8 @@ debug:
 release:
 	go build -ldflags '-s -w -X github.com/IfanTsai/jirachi/repl.Release=true' -o bin/jirachi main.go
 
+install:
+	cp -f bin/jirachi /usr/local/bin/
+
 clean:
 	rm -r bin/jirachi
