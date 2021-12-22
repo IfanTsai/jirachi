@@ -34,6 +34,124 @@ func BenchmarkRunFib20(b *testing.B) {
 	}
 }
 
+func TestRun(t *testing.T) {
+	t.Parallel()
+	testCases := []struct {
+		name        string
+		source      string
+		checkResult func(t *testing.T, resValue interface{}, err error)
+	}{
+		{
+			name: "single line",
+			source: `
+				FUN test() -> FOR i = 1 TO 10 THEN IF i == 6 THEN i ELSE i + 1
+				
+				a = test()
+			`,
+			checkResult: func(t *testing.T, resValue interface{}, err error) {
+				t.Helper()
+				require.NoError(t, err)
+				require.IsType(t, object.NewJList(nil), resValue)
+				require.Len(t, resValue.(*object.JList).ElementValues, 2)
+				require.Equal(t, "[2, 3, 4, 5, 6, 6, 8, 9, 10]", resValue.(*object.JList).ElementValues[1].String())
+
+			},
+		},
+		{
+			name: "break",
+			source: `
+				FUN test() 
+					res = []
+					FOR i = 1 TO 10 THEN
+						IF i == 6 THEN 
+							BREAK
+						ELSE
+							res = res + i
+						END
+					END
+
+					RETURN res
+				END
+				
+				
+				a = test()
+			`,
+			checkResult: func(t *testing.T, resValue interface{}, err error) {
+				t.Helper()
+				require.NoError(t, err)
+				require.IsType(t, object.NewJList(nil), resValue)
+				require.Len(t, resValue.(*object.JList).ElementValues, 2)
+				require.Equal(t, "[1, 2, 3, 4, 5]", resValue.(*object.JList).ElementValues[1].String())
+
+			},
+		},
+		{
+			name: "continue",
+			source: `
+				FUN test() 
+					res = []
+					FOR i = 1 TO 10 THEN
+						IF i == 6 THEN 
+							CONTINUE	
+						ELSE
+							res = res + i
+						END
+					END
+
+					RETURN res
+				END
+				
+				
+				a = test()
+			`,
+			checkResult: func(t *testing.T, resValue interface{}, err error) {
+				t.Helper()
+				require.NoError(t, err)
+				require.IsType(t, object.NewJList(nil), resValue)
+				require.Len(t, resValue.(*object.JList).ElementValues, 2)
+				require.Equal(t, "[1, 2, 3, 4, 5, 7, 8, 9]", resValue.(*object.JList).ElementValues[1].String())
+
+			},
+		},
+		{
+			name: "return",
+			source: `
+				FUN test(list) 
+					FOR i = 1 TO 10 THEN
+						IF i == 6 THEN 
+							RETURN
+						ELSE
+							list[i] = list[i] * 2
+						END
+					END
+				END
+				
+				list = FOR i = 0 TO 10 THEN i
+				test(list)	
+			`,
+			checkResult: func(t *testing.T, resValue interface{}, err error) {
+				t.Helper()
+				require.NoError(t, err)
+				require.IsType(t, object.NewJList(nil), resValue)
+				require.Len(t, resValue.(*object.JList).ElementValues, 3)
+				require.Equal(t, "[0, 2, 4, 6, 8, 10, 6, 7, 8, 9]", resValue.(*object.JList).ElementValues[1].String())
+				require.Nil(t, resValue.(*object.JList).ElementValues[2])
+
+			},
+		},
+	}
+
+	for i := range testCases {
+		testCase := testCases[i]
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+
+			resValue, err := interpreter.Run("<test>", testCase.source)
+			testCase.checkResult(t, resValue, err)
+		})
+	}
+}
+
 func TestJInterpreter_Visit(t *testing.T) {
 	t.Parallel()
 	testCases := []struct {

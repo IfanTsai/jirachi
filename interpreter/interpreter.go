@@ -61,17 +61,29 @@ func Run(filename, text string) (interface{}, error) {
 }
 
 type JInterpreter struct {
-	Context *common.JContext
+	Context    *common.JContext
+	IsReturn   bool
+	IsBreak    bool
+	IsContinue bool
 }
 
 func NewJInterpreter(context *common.JContext) *JInterpreter {
 	return &JInterpreter{
-		Context: context,
+		Context:    context,
+		IsReturn:   false,
+		IsBreak:    false,
+		IsContinue: false,
 	}
 }
 
 func (i *JInterpreter) Interpreter(ast parser.JNode) (object.JValue, error) {
 	return i.visit(ast)
+}
+
+func (i *JInterpreter) Reset() {
+	i.IsReturn = false
+	i.IsBreak = false
+	i.IsContinue = false
 }
 
 func (i *JInterpreter) visit(node parser.JNode) (object.JValue, error) {
@@ -108,6 +120,12 @@ func (i *JInterpreter) visit(node parser.JNode) (object.JValue, error) {
 		return i.visitIndexExprNode(node.(*parser.JIndexExprNode))
 	case parser.VarIndexAssign:
 		return i.visitVarIndexAssignNode(node.(*parser.JVarIndexAssignNode))
+	case parser.ReturnExpr:
+		return i.visitReturnExprNode(node.(*parser.JReturnNode))
+	case parser.BreakExpr:
+		return i.visitBreakExprNode(node.(*parser.JBreakNode))
+	case parser.ContinueExpr:
+		return i.visitContinueExprNode(node.(*parser.JContinueNode))
 	default:
 		return nil, errors.Wrap(&common.JInvalidSyntaxError{
 			JError: &common.JError{
@@ -130,11 +148,25 @@ func (i *JInterpreter) visitStringNode(node *parser.JStringNode) (object.JValue,
 func (i *JInterpreter) visitListNode(node *parser.JListNode) (object.JValue, error) {
 	elementValues := make([]object.JValue, len(node.ElementNodes))
 	for index := range node.ElementNodes {
-		value, err := i.visit(node.ElementNodes[index])
+		elementNode := node.ElementNodes[index]
+		value, err := i.visit(elementNode)
 		if err != nil {
 			return nil, err
 		}
+
+		if i.IsReturn || i.IsBreak || i.IsContinue {
+			if i.IsReturn {
+				i.Reset()
+			}
+
+			return value, nil
+		}
+
 		elementValues[index] = value
+	}
+
+	if node.IsBlockStatements {
+		return elementValues[len(elementValues)-1], nil
 	}
 
 	return object.NewJList(elementValues).SetJPos(node.StartPos, node.EndPos).SetJContext(i.Context), nil
@@ -309,6 +341,18 @@ func (i *JInterpreter) visitWhileExprNode(node *parser.JWhileExprNode) (object.J
 			return nil, err
 		}
 
+		if i.IsBreak {
+			i.Reset()
+
+			break
+		} else if i.IsContinue {
+			i.Reset()
+
+			continue
+		} else if i.IsReturn {
+			return res, nil
+		}
+
 		resElementValues = append(resElementValues, res)
 	}
 
@@ -316,9 +360,14 @@ func (i *JInterpreter) visitWhileExprNode(node *parser.JWhileExprNode) (object.J
 		return object.NewJNumber(nil), nil
 	}
 
+	if node.IsBlockStatements {
+		return resElementValues[len(resElementValues)-1], nil
+	}
+
 	return object.NewJList(resElementValues).SetJPos(node.StartPos, node.EndPos).SetJContext(i.Context), nil
 }
 
+// nolint: gocyclo, cyclop
 func (i *JInterpreter) visitForExprNode(node *parser.JForExprNode) (object.JValue, error) {
 	startNumber, err := i.visit(node.StartValueNode)
 	if err != nil {
@@ -385,6 +434,18 @@ func (i *JInterpreter) visitForExprNode(node *parser.JForExprNode) (object.JValu
 				return nil, err
 			}
 
+			if i.IsBreak {
+				i.Reset()
+
+				break
+			} else if i.IsContinue {
+				i.Reset()
+
+				continue
+			} else if i.IsReturn {
+				return res, nil
+			}
+
 			resElementValues = append(resElementValues, res)
 		}
 	} else {
@@ -404,12 +465,28 @@ func (i *JInterpreter) visitForExprNode(node *parser.JForExprNode) (object.JValu
 				return nil, err
 			}
 
+			if i.IsBreak {
+				i.Reset()
+
+				break
+			} else if i.IsContinue {
+				i.Reset()
+
+				continue
+			} else if i.IsReturn {
+				return res, nil
+			}
+
 			resElementValues = append(resElementValues, res)
 		}
 	}
 
 	if res == nil {
 		return object.NewJNumber(nil), nil
+	}
+
+	if node.IsBlockStatements {
+		return resElementValues[len(resElementValues)-1], nil
 	}
 
 	return object.NewJList(resElementValues).SetJPos(node.StartPos, node.EndPos).SetJContext(i.Context), nil
@@ -516,6 +593,29 @@ func (i *JInterpreter) visitVarIndexAssignNode(node *parser.JVarIndexAssignNode)
 	}
 
 	return resValue, nil
+}
+
+func (i *JInterpreter) visitReturnExprNode(node *parser.JReturnNode) (object.JValue, error) {
+	resValue, err := i.visit(node.ReturnNode)
+	if err != nil {
+		return nil, err
+	}
+
+	i.IsReturn = true
+
+	return resValue, nil
+}
+
+func (i *JInterpreter) visitBreakExprNode(*parser.JBreakNode) (object.JValue, error) {
+	i.IsBreak = true
+
+	return nil, nil
+}
+
+func (i *JInterpreter) visitContinueExprNode(*parser.JContinueNode) (object.JValue, error) {
+	i.IsContinue = true
+
+	return nil, nil
 }
 
 func executeFunction(function *object.JFunction, argValues []object.JValue) (object.JValue, error) {

@@ -17,8 +17,8 @@ The plan supports the following features:
 - [x] List
 - [ ] Map
 - [x] Built-in Functions
-- [ ] Branch Control Statement (BREAK, CONTINUE, RETURN)
-- [ ] Comment
+- [x] Branch Control Statement (BREAK, CONTINUE, RETURN)
+- [x] Comment
 - [ ] File IO
 - [ ] Network IO
 - [ ] Coroutine
