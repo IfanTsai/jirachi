@@ -40,22 +40,22 @@ const (
 )
 
 const (
-	AND      = "AND"
-	OR       = "OR"
-	NOT      = "NOT"
-	IF       = "IF"
-	THEN     = "THEN"
-	ELIF     = "ELIF"
-	ELSE     = "ELSE"
-	FOR      = "FOR"
-	TO       = "TO"
-	STEP     = "STEP"
-	WHILE    = "WHILE"
-	FUN      = "FUN"
-	END      = "END"
-	RETURN   = "RETURN"
-	BREAK    = "BREAK"
-	CONTINUE = "CONTINUE"
+	AND      = "and"
+	OR       = "or"
+	NOT      = "not"
+	IF       = "if"
+	THEN     = "then"
+	ELIF     = "elif"
+	ELSE     = "else"
+	FOR      = "for"
+	TO       = "to"
+	STEP     = "step"
+	WHILE    = "while"
+	FUN      = "fun"
+	END      = "end"
+	RETURN   = "return"
+	BREAK    = "break"
+	CONTINUE = "continue"
 )
 
 var KEYWORDS = set.NewSet(
