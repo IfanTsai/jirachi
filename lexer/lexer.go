@@ -40,6 +40,8 @@ func (l *JLexer) MakeTokens() ([]*token.JToken, error) {
 		switch {
 		case char == ' ' || char == '\t':
 			advanceAble = l.advance()
+		case char == '#':
+			advanceAble = l.skipComment()
 		case char == ';' || char == '\n':
 			tokens = append(tokens, token.NewJToken(token.NEWLINE, nil, l.Pos, l.Pos))
 			advanceAble = l.advance()
@@ -317,6 +319,16 @@ func (l *JLexer) makeGreaterThanToken() (*token.JToken, bool) {
 	}
 
 	return token.NewJToken(tokenType, nil, startPos, l.Pos), advanceAble
+}
+
+func (l *JLexer) skipComment() bool {
+	advanceAble := l.advance()
+
+	for advanceAble && l.getCurrentChar() != '\n' {
+		advanceAble = l.advance()
+	}
+
+	return advanceAble
 }
 
 func (l *JLexer) advance() bool {

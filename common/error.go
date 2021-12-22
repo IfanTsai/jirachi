@@ -55,10 +55,6 @@ func (e *JRunTimeError) Error() string {
 	return e.generateTraceBack() + e.ErrorString("Runtime Error", e.Details)
 }
 
-func (e *JRunTimeError) ErrorWithNoTraceBack() string {
-	return e.ErrorString("Runtime Error", e.Details)
-}
-
 func (e *JRunTimeError) generateTraceBack() string {
 	pos := e.StartPos
 	context := e.Context

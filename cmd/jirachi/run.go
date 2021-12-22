@@ -5,6 +5,8 @@ import (
 	"io"
 	"os"
 
+	"github.com/pkg/errors"
+
 	"github.com/IfanTsai/jirachi/repl"
 
 	"github.com/IfanTsai/jirachi/interpreter"
@@ -27,7 +29,11 @@ func main() {
 
 		_, err = interpreter.Run(filename, string(bytes))
 		if err != nil {
-			fmt.Printf("%+v", err)
+			if repl.Release == "true" {
+				fmt.Printf("%v", errors.Cause(err))
+			} else {
+				fmt.Printf("%+v", err)
+			}
 		}
 
 	}
