@@ -51,23 +51,9 @@ func ExecuteLen(function *object.JBuiltInFunction, args []object.JValue) (object
 }
 
 func ExecuteType(function *object.JBuiltInFunction, args []object.JValue) (object.JValue, error) {
-	var argType string
 	arg := args[0]
 
-	switch arg.(type) {
-	case *object.JNumber:
-		argType = object.Number
-	case *object.JString:
-		argType = object.String
-	case *object.JList:
-		argType = object.List
-	case *object.JFunction:
-		argType = object.Function
-	case *object.JBuiltInFunction:
-		argType = object.BuiltInFunction
-	}
-
-	return object.NewJString(argType), nil
+	return object.NewJString(object.GetJvalueType(arg)), nil
 }
 
 func ExecuteIsNumber(function *object.JBuiltInFunction, args []object.JValue) (object.JValue, error) {

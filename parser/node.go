@@ -16,6 +16,7 @@ const (
 	Number
 	String
 	List
+	Map
 	VarAssign
 	VarIndexAssign
 	VarAccess
@@ -112,6 +113,35 @@ func (l *JListNode) String() string {
 		strBuilder.WriteString(element.String())
 	}
 	strBuilder.WriteByte(']')
+
+	return strBuilder.String()
+}
+
+// JMapNode is map node structure of AST
+type JMapNode struct {
+	*JBaseNode
+	ElementMap map[JNode]JNode
+}
+
+func (m *JMapNode) Type() JNodeType {
+	return Map
+}
+
+func (m *JMapNode) String() string {
+	strBuilder := strings.Builder{}
+	strBuilder.WriteByte('{')
+	firstKey := true
+	for key, value := range m.ElementMap {
+		if !firstKey {
+			strBuilder.WriteString(", ")
+		}
+
+		firstKey = false
+		strBuilder.WriteString(key.String())
+		strBuilder.WriteString(": ")
+		strBuilder.WriteString(value.String())
+	}
+	strBuilder.WriteByte('}')
 
 	return strBuilder.String()
 }

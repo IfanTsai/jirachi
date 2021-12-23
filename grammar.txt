@@ -25,6 +25,8 @@ call-expr  : atom ( LPAREN ( expr ( COMMA expr )* )? RPAREN )?
 atom       : INT | FLOAT | STRING
            : IDENTIFIER                // variable access
            : LPAREN expr RPAREN
+           : list-expr
+           : map-expr
            : if-expr
            : for-expr
            : while-expr
@@ -32,6 +34,8 @@ atom       : INT | FLOAT | STRING
            : index-expr
 
 list-expr  : LSQUARE ( expr ( COMMA expr )* )? RSQUARE
+
+map-expr   : LBRACE ( expr COLON expr (COMMA expr COLON expr)* )? RBRACE
 
 if-expr    : KEYWORD:IF expr KEYWORD:THEN
              ( statement elif-expr | else-expr?)

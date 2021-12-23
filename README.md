@@ -15,7 +15,7 @@ The plan supports the following features:
 - [x] Function
 - [x] String
 - [x] List
-- [ ] Map
+- [x] Map
 - [x] Built-in Functions
 - [x] Branch Control Statement (break, continue, return)
 - [x] Comment

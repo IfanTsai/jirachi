@@ -113,33 +113,28 @@ func (p *JParser) indexExpr(atomNode JNode) (JNode, error) {
 }
 
 func (p *JParser) listExpr() (JNode, error) {
-	if p.CurrentToken.Type != token.LSQUARE {
-		return nil, p.createInvalidSyntaxError("'['", "list expression")
-	}
-
 	startPos := p.CurrentToken.StartPos
 
 	p.advance()
 
 	var elementNodes []JNode
 	if p.CurrentToken.Type != token.RSQUARE {
-		expr, err := p.expr()
-		if err != nil {
-			return nil, p.createInvalidSyntaxError(
-				"Expected ']', 'if', 'for', 'while', 'fun', number, identifier, '+', '-', '(', '[', or 'not'",
-				"list expression",
-			)
-		}
-
-		elementNodes = append(elementNodes, expr)
-
-		for p.CurrentToken.Type == token.COMMA {
-			p.advance()
+		isFirstElement := true
+		for isFirstElement || p.CurrentToken.Type == token.COMMA {
+			if !isFirstElement {
+				p.advance()
+			} else {
+				isFirstElement = false
+			}
 
 			expr, err := p.expr()
 			if err != nil {
-				return nil, err
+				return nil, p.createInvalidSyntaxError(
+					"Expected ']', 'if', 'for', 'while', 'fun', number, identifier, '+', '-', '(', '[', or 'not'",
+					"list expression",
+				)
 			}
+
 			elementNodes = append(elementNodes, expr)
 		}
 
@@ -155,6 +150,58 @@ func (p *JParser) listExpr() (JNode, error) {
 			EndPos:   p.CurrentToken.EndPos.Copy().Back(nil),
 		},
 		ElementNodes: elementNodes,
+	}, nil
+}
+
+func (p *JParser) mapExpr() (JNode, error) {
+	startPos := p.CurrentToken.StartPos
+
+	p.advance()
+
+	elementMap := make(map[JNode]JNode)
+	if p.CurrentToken.Type != token.RBRACE {
+		isFirstElement := true
+		for isFirstElement || p.CurrentToken.Type == token.COMMA {
+			if !isFirstElement {
+				p.advance()
+			} else {
+				isFirstElement = false
+			}
+
+			KeyExpr, err := p.expr()
+			if err != nil {
+				return nil, p.createInvalidSyntaxError(
+					"Expected '}', 'if', 'for', 'while', 'fun', number, identifier, '+', '-', '(', '[', or 'not'",
+					"map expression",
+				)
+			}
+
+			if p.CurrentToken.Type != token.COLON {
+				return nil, p.createInvalidSyntaxError("':'", "map expression")
+			}
+
+			p.advance()
+
+			valueExpr, err := p.expr()
+			if err != nil {
+				return nil, err
+			}
+
+			elementMap[KeyExpr] = valueExpr
+		}
+
+		if p.CurrentToken.Type != token.RBRACE {
+			return nil, p.createInvalidSyntaxError("',' or '}'", "map expression")
+		}
+	}
+
+	p.advance()
+	return &JMapNode{
+		JBaseNode: &JBaseNode{
+			StartPos: startPos,
+			EndPos:   p.CurrentToken.EndPos.Copy().Back(nil),
+		},
+		ElementMap: elementMap,
 	}, nil
 }
 
@@ -571,6 +618,8 @@ func (p *JParser) atom() (JNode, error) {
 		return expr, nil
 	case token.LSQUARE:
 		return p.listExpr()
+	case token.LBRACE:
+		return p.mapExpr()
 	case token.KEYWORD:
 		switch currentToken.Value {
 		case token.IF:
