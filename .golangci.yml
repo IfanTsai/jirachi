@@ -50,4 +50,6 @@ linters:
     - interfacer # Deprecated
     - golint  # Deprecated
     - ireturn # Do not check the return object is interface
+    - gocyclo
+    - cyclop
   enable-all: true
