@@ -27,6 +27,9 @@ const (
 	RPAREN     JTokenType = "RPAREN"  // )
 	LSQUARE    JTokenType = "LSQUARE" // [
 	RSQUARE    JTokenType = "RSQUARE" // ]
+	LBRACE     JTokenType = "LBRACE"  // {
+	RBRACE     JTokenType = "RBRACE"  // }
+	COLON      JTokenType = "COLON"   // :
 	EE         JTokenType = "EE"      // ==
 	NE         JTokenType = "NE"      // !=
 	LT         JTokenType = "LT"      // <

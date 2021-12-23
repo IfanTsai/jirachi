@@ -30,5 +30,25 @@ func (n *JNull) Copy() JValue {
 }
 
 func (n *JNull) String() string {
-	return "<NULL>"
+	return "<null>"
+}
+
+func (n *JNull) EqualTo(other JValue) (JValue, error) {
+	res := false
+
+	if _, ok := other.(*JNull); ok {
+		res = true
+	}
+
+	return NewJNumber(boolToNumber(res)).SetJContext(n.Context), nil
+}
+
+func (n *JNull) NotEqualTo(other JValue) (JValue, error) {
+	res := true
+
+	if _, ok := other.(*JNull); ok {
+		res = false
+	}
+
+	return NewJNumber(boolToNumber(res)).SetJContext(n.Context), nil
 }
