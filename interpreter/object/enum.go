@@ -6,4 +6,5 @@ const (
 	List            = "list"
 	Function        = "function"
 	BuiltInFunction = "built-in function"
+	Unknow          = "Unknow"
 )

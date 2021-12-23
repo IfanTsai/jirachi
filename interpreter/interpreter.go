@@ -98,6 +98,8 @@ func (i *JInterpreter) visit(node parser.JNode) (object.JValue, error) {
 		return i.visitStringNode(node.(*parser.JStringNode))
 	case parser.List:
 		return i.visitListNode(node.(*parser.JListNode))
+	case parser.Map:
+		return i.visitMapNode(node.(*parser.JMapNode))
 	case parser.BinOp:
 		return i.visitBinOpNode(node.(*parser.JBinOpNode))
 	case parser.UnaryOp:
@@ -170,6 +172,36 @@ func (i *JInterpreter) visitListNode(node *parser.JListNode) (object.JValue, err
 	}
 
 	return object.NewJList(elementValues).SetJPos(node.StartPos, node.EndPos).SetJContext(i.Context), nil
+}
+
+func (i *JInterpreter) visitMapNode(node *parser.JMapNode) (object.JValue, error) {
+	elementMap := make(map[interface{}]object.JValue)
+	for keyNode, valueNode := range node.ElementMap {
+		keyNodeValue, err := i.visit(keyNode)
+		if err != nil {
+			return nil, err
+		}
+
+		if !object.CanHashed(keyNodeValue) {
+			return nil, &common.JRunTimeError{
+				JError: &common.JError{
+					StartPos: keyNodeValue.GetStartPos(),
+					EndPos:   keyNodeValue.GetEndPos(),
+				},
+				Context: i.Context,
+				Details: "Cannot hashed",
+			}
+		}
+
+		valueNodeValue, err := i.visit(valueNode)
+		if err != nil {
+			return nil, err
+		}
+
+		elementMap[keyNodeValue.GetValue()] = valueNodeValue
+	}
+
+	return object.NewJMap(elementMap).SetJPos(node.StartPos, node.EndPos).SetJContext(i.Context), nil
 }
 
 func (i *JInterpreter) visitVarAssignNode(node *parser.JVarAssignNode) (object.JValue, error) {
@@ -367,7 +399,6 @@ func (i *JInterpreter) visitWhileExprNode(node *parser.JWhileExprNode) (object.J
 	return object.NewJList(resElementValues).SetJPos(node.StartPos, node.EndPos).SetJContext(i.Context), nil
 }
 
-// nolint: gocyclo, cyclop
 func (i *JInterpreter) visitForExprNode(node *parser.JForExprNode) (object.JValue, error) {
 	startNumber, err := i.visit(node.StartValueNode)
 	if err != nil {
