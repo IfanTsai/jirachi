@@ -4,8 +4,7 @@ import (
 	"encoding/json"
 	"strconv"
 
-	"github.com/IfanTsai/jirachi/pkg/set"
-
+	"github.com/IfanTsai/go-lib/set"
 	"github.com/IfanTsai/jirachi/common"
 )
 
