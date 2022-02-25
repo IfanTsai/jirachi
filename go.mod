@@ -9,10 +9,16 @@ require (
 )
 
 require (
-	github.com/chzyer/logex v1.1.10 // indirect
+	github.com/IfanTsai/go-lib v0.0.0-20220225122438-322a14038807
 	github.com/chzyer/test v0.0.0-20210722231415-061457976a23 // indirect
-	github.com/davecgh/go-spew v1.1.0 // indirect
+)
+
+require (
+	github.com/chzyer/logex v1.1.10 // indirect
+	github.com/davecgh/go-spew v1.1.1 // indirect
+	github.com/kr/pretty v0.1.0 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
-	golang.org/x/sys v0.0.0-20211124211545-fe61309f8881 // indirect
-	gopkg.in/yaml.v3 v3.0.0-20200313102051-9f266ea9e77c // indirect
+	golang.org/x/sys v0.0.0-20220114195835-da31bd327af9 // indirect
+	gopkg.in/check.v1 v1.0.0-20190902080502-41f04d3bba15 // indirect
+	gopkg.in/yaml.v3 v3.0.0-20210107192922-496545a6307b // indirect
 )

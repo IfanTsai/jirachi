@@ -3,8 +3,9 @@ package parser
 import (
 	"fmt"
 
+	"github.com/IfanTsai/go-lib/set"
+
 	"github.com/IfanTsai/jirachi/common"
-	"github.com/IfanTsai/jirachi/pkg/set"
 	"github.com/IfanTsai/jirachi/token"
 	"github.com/pkg/errors"
 )
