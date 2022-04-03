@@ -3,26 +3,20 @@ package object
 import (
 	"fmt"
 	"strings"
-	"sync"
 
 	"github.com/IfanTsai/jirachi/common"
+	"github.com/IfanTsai/jirachi/pkg/safemap"
 )
-
-const maxDeletion = 10000
 
 type JMap struct {
 	*JBaseValue
-	ElementMap map[interface{}]JValue
-	Deletion   int
-	lock       *sync.RWMutex
+	ElementMap *safemap.SafeMap[JValue]
 }
 
-func NewJMap(elementMap map[interface{}]JValue) *JMap {
+func NewJMap(elementMap *safemap.SafeMap[JValue]) *JMap {
 	return &JMap{
 		JBaseValue: &JBaseValue{},
 		ElementMap: elementMap,
-		Deletion:   0,
-		lock:       &sync.RWMutex{},
 	}
 }
 
@@ -40,12 +34,7 @@ func (m *JMap) SetJContext(context *common.JContext) JValue {
 }
 
 func (m *JMap) Copy() JValue {
-	m.lock.RLock()
 	copyMap := NewJMap(m.ElementMap)
-	m.lock.RUnlock()
-
-	copyMap.Deletion = m.Deletion
-	copyMap.lock = m.lock
 
 	return copyMap
 }
@@ -62,10 +51,7 @@ func (m *JMap) IndexAccess(arg JValue) (JValue, error) {
 		}
 	}
 
-	m.lock.RLock()
-	defer m.lock.RUnlock()
-
-	if resValue, ok := m.ElementMap[arg.GetValue()]; ok {
+	if resValue, ok := m.ElementMap.Get(arg.GetValue()); ok {
 		return resValue, nil
 	}
 
@@ -84,35 +70,22 @@ func (m *JMap) IndexAssign(indexArg, indexValue JValue) (JValue, error) {
 		}
 	}
 
-	m.lock.Lock()
 	if _, ok := indexValue.(*JNull); ok {
-		delete(m.ElementMap, indexArg.GetValue())
-		m.Deletion++
-
-		if m.Deletion >= maxDeletion {
-			newElementMap := make(map[interface{}]JValue, len(m.ElementMap))
-			for key, value := range m.ElementMap {
-				newElementMap[key] = value
-			}
-
-			m.ElementMap = newElementMap
-			m.Deletion = 0
-		}
+		m.ElementMap.Del(indexArg.GetValue())
 	} else {
-		m.ElementMap[indexArg.GetValue()] = indexValue
+		m.ElementMap.Set(indexArg.GetValue(), indexValue)
 	}
-	m.lock.Unlock()
 
 	return m, nil
 }
 
 func (m *JMap) String() string {
+
 	strBuilder := strings.Builder{}
 	strBuilder.WriteByte('{')
 	firstKey := true
 
-	m.lock.RLock()
-	for key, value := range m.ElementMap {
+	m.ElementMap.Range(func(key any, value JValue) bool {
 		if !firstKey {
 			strBuilder.WriteString(", ")
 		}
@@ -121,8 +94,9 @@ func (m *JMap) String() string {
 		strBuilder.WriteString(fmt.Sprintf("%v", key))
 		strBuilder.WriteString(": ")
 		strBuilder.WriteString(value.String())
-	}
-	m.lock.RUnlock()
+
+		return true
+	})
 
 	strBuilder.WriteByte('}')
 

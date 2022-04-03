@@ -2,6 +2,7 @@ package token
 
 import (
 	"encoding/json"
+	"fmt"
 	"strconv"
 
 	"github.com/IfanTsai/go-lib/set"
@@ -126,7 +127,11 @@ func (t *JToken) ValueToString() string {
 	case string:
 		return value
 	default:
-		newValue, _ := json.Marshal(value)
+		newValue, err := json.Marshal(value)
+		if err != nil {
+			fmt.Println("cannot marshal value")
+		}
+
 		return string(newValue)
 	}
 }
