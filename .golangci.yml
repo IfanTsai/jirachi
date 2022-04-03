@@ -24,6 +24,9 @@ linters-settings:
 
 linters:
   disable:
+    - forcetypeassert
+    - maintidx
+    - varnamelen
     - gochecknoglobals
     - funlen
     - lll  # Don't complain of line too long

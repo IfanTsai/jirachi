@@ -3,18 +3,18 @@ package common
 import "github.com/IfanTsai/jirachi/pkg/safemap"
 
 type JSymbolTable struct {
-	Symbols *safemap.SafeMap
+	Symbols *safemap.SafeMap[any]
 	Parent  *JSymbolTable
 }
 
 func NewJSymbolTable(parent *JSymbolTable) *JSymbolTable {
 	return &JSymbolTable{
-		Symbols: safemap.NewSafeMap(),
+		Symbols: safemap.NewSafeMap[any](),
 		Parent:  parent,
 	}
 }
 
-func (st *JSymbolTable) Get(name interface{}) interface{} {
+func (st *JSymbolTable) Get(name any) any {
 	symbolTable := st
 
 	for symbolTable != nil {
@@ -28,13 +28,13 @@ func (st *JSymbolTable) Get(name interface{}) interface{} {
 	return nil
 }
 
-func (st *JSymbolTable) Set(name, value interface{}) *JSymbolTable {
+func (st *JSymbolTable) Set(name, value any) *JSymbolTable {
 	st.Symbols.Set(name, value)
 
 	return st
 }
 
-func (st *JSymbolTable) Remove(name interface{}) *JSymbolTable {
+func (st *JSymbolTable) Remove(name any) *JSymbolTable {
 	st.Symbols.Del(name)
 
 	return st

@@ -10,24 +10,24 @@ const (
 // SafeMap provides a map alternative to avoid memory leak.
 // This implementation is not needed until issue below fixed.
 // https://github.com/golang/go/issues/20135
-type SafeMap struct {
+type SafeMap[V any] struct {
 	lock        sync.RWMutex
 	deletionOld int
 	deletionNew int
-	dirtyOld    map[interface{}]interface{}
-	dirtyNew    map[interface{}]interface{}
+	dirtyOld    map[any]V
+	dirtyNew    map[any]V
 }
 
 // NewSafeMap returns a SafeMap.
-func NewSafeMap() *SafeMap {
-	return &SafeMap{
-		dirtyOld: make(map[interface{}]interface{}),
-		dirtyNew: make(map[interface{}]interface{}),
+func NewSafeMap[V any]() *SafeMap[V] {
+	return &SafeMap[V]{
+		dirtyOld: make(map[any]V),
+		dirtyNew: make(map[any]V),
 	}
 }
 
 // Del deletes the object with the given key from m.
-func (m *SafeMap) Del(key interface{}) {
+func (m *SafeMap[V]) Del(key any) {
 	m.lock.Lock()
 
 	if _, ok := m.dirtyOld[key]; ok {
@@ -44,7 +44,7 @@ func (m *SafeMap) Del(key interface{}) {
 		}
 		m.dirtyOld = m.dirtyNew
 		m.deletionOld = m.deletionNew
-		m.dirtyNew = make(map[interface{}]interface{})
+		m.dirtyNew = make(map[any]V)
 		m.deletionNew = 0
 	}
 
@@ -53,7 +53,7 @@ func (m *SafeMap) Del(key interface{}) {
 			m.dirtyOld[k] = v
 		}
 
-		m.dirtyNew = make(map[interface{}]interface{})
+		m.dirtyNew = make(map[any]V)
 		m.deletionNew = 0
 	}
 
@@ -61,7 +61,7 @@ func (m *SafeMap) Del(key interface{}) {
 }
 
 // Get gets the object with the given key from m.
-func (m *SafeMap) Get(key interface{}) (interface{}, bool) {
+func (m *SafeMap[V]) Get(key any) (V, bool) {
 	m.lock.RLock()
 	defer m.lock.RUnlock()
 
@@ -75,7 +75,7 @@ func (m *SafeMap) Get(key interface{}) (interface{}, bool) {
 }
 
 // Set sets the object into m with the given key.
-func (m *SafeMap) Set(key, value interface{}) {
+func (m *SafeMap[V]) Set(key any, value V) {
 	m.lock.Lock()
 
 	if m.deletionOld <= maxDeletion {
@@ -98,7 +98,7 @@ func (m *SafeMap) Set(key, value interface{}) {
 }
 
 // Size returns the size of m.
-func (m *SafeMap) Size() int {
+func (m *SafeMap[V]) Size() int {
 	m.lock.RLock()
 
 	size := len(m.dirtyOld) + len(m.dirtyNew)
@@ -106,4 +106,18 @@ func (m *SafeMap) Size() int {
 	m.lock.RUnlock()
 
 	return size
+}
+
+// Range calls f sequentially for each key and value present in the map.
+func (m *SafeMap[V]) Range(f func(key any, value V) bool) {
+	validMap := m.dirtyNew
+	if len(m.dirtyOld) > 0 {
+		validMap = m.dirtyOld
+	}
+
+	for k, v := range validMap {
+		if !f(k, v) {
+			break
+		}
+	}
 }

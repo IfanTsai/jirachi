@@ -12,16 +12,7 @@ fun fib1(n)
     return res[n]  # can remove the return keyword
 end
 
-# recursion
-fib2 = fun(n)      # anonymous function
-    if n <= 2 then
-        1
-    else
-        fib2(n - 1) + fib2(n - 2)
-    end
-end
-
-fib3 = fun(n)
+fib2 = fun(n)
     if n <= 2 then
         return 1
     end
@@ -34,6 +25,15 @@ fib3 = fun(n)
         f3 = f1 + f2
         f1 = f2
         f2 = f3
+    end
+end
+
+# recursion
+fib3 = fun(n)      # anonymous function
+    if n <= 2 then
+        1
+    else
+        fib3(n - 1) + fib3(n - 2)
     end
 end
 
