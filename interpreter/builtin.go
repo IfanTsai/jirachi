@@ -53,7 +53,7 @@ func ExecuteLen(function *object.JBuiltInFunction, args []object.JValue) (object
 func ExecuteType(function *object.JBuiltInFunction, args []object.JValue) (object.JValue, error) {
 	arg := args[0]
 
-	return object.NewJString(object.GetJvalueType(arg)), nil
+	return object.NewJString(object.GetJValueType(arg)), nil
 }
 
 func ExecuteIsNumber(function *object.JBuiltInFunction, args []object.JValue) (object.JValue, error) {

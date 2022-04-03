@@ -1,6 +1,6 @@
 package object
 
-func GetJvalueType(arg JValue) string {
+func GetJValueType(arg JValue) string {
 	switch arg.(type) {
 	case *JNumber:
 		return Number
@@ -18,7 +18,7 @@ func GetJvalueType(arg JValue) string {
 }
 
 func CanHashed(arg JValue) bool {
-	argType := GetJvalueType(arg)
+	argType := GetJValueType(arg)
 	if argType == String || argType == Number {
 		return true
 	}

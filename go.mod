@@ -1,6 +1,6 @@
 module github.com/IfanTsai/jirachi
 
-go 1.17
+go 1.18
 
 require (
 	github.com/chzyer/readline v0.0.0-20180603132655-2972be24d48e
@@ -18,7 +18,7 @@ require (
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/kr/pretty v0.1.0 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
-	golang.org/x/sys v0.0.0-20220114195835-da31bd327af9 // indirect
+	golang.org/x/sys v0.0.0-20220403020550-483a9cbc67c0 // indirect
 	gopkg.in/check.v1 v1.0.0-20190902080502-41f04d3bba15 // indirect
 	gopkg.in/yaml.v3 v3.0.0-20210107192922-496545a6307b // indirect
 )

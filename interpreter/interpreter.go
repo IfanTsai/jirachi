@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"reflect"
 
+	"github.com/IfanTsai/jirachi/pkg/safemap"
+
 	"github.com/IfanTsai/jirachi/interpreter/object"
 
 	"github.com/IfanTsai/jirachi/common"
@@ -175,7 +177,7 @@ func (i *JInterpreter) visitListNode(node *parser.JListNode) (object.JValue, err
 }
 
 func (i *JInterpreter) visitMapNode(node *parser.JMapNode) (object.JValue, error) {
-	elementMap := make(map[interface{}]object.JValue)
+	elementMap := safemap.NewSafeMap[object.JValue]()
 	for keyNode, valueNode := range node.ElementMap {
 		keyNodeValue, err := i.visit(keyNode)
 		if err != nil {
@@ -198,7 +200,7 @@ func (i *JInterpreter) visitMapNode(node *parser.JMapNode) (object.JValue, error
 			return nil, err
 		}
 
-		elementMap[keyNodeValue.GetValue()] = valueNodeValue
+		elementMap.Set(keyNodeValue.GetValue(), valueNodeValue)
 	}
 
 	return object.NewJMap(elementMap).SetJPos(node.StartPos, node.EndPos).SetJContext(i.Context), nil
@@ -421,7 +423,6 @@ func (i *JInterpreter) visitForExprNode(node *parser.JForExprNode) (object.JValu
 	}
 
 	isFloat := false
-	var resElementValues []object.JValue
 
 	if _, ok := startNumber.GetValue().(float64); ok {
 		isFloat = true
@@ -430,8 +431,6 @@ func (i *JInterpreter) visitForExprNode(node *parser.JForExprNode) (object.JValu
 	} else if _, ok := stepNumber.GetValue().(float64); ok {
 		isFloat = true
 	}
-
-	var res object.JValue
 
 	if isFloat {
 		var start, end, step float64
@@ -453,74 +452,14 @@ func (i *JInterpreter) visitForExprNode(node *parser.JForExprNode) (object.JValu
 			step = reflect.ValueOf(stepNumber.GetValue()).Float()
 		}
 
-		for j := start; ; j += step {
-			if (step > 0 && j >= end) || (step < 0 && j <= end) {
-				break
-			}
-
-			i.Context.SymbolTable.Set(node.Token.Value, object.NewJNumber(j))
-
-			res, err = i.visit(node.BodyNode)
-			if err != nil {
-				return nil, err
-			}
-
-			if i.IsBreak {
-				i.Reset()
-
-				break
-			} else if i.IsContinue {
-				i.Reset()
-
-				continue
-			} else if i.IsReturn {
-				return res, nil
-			}
-
-			resElementValues = append(resElementValues, res)
-		}
-	} else {
-		start := int(reflect.ValueOf(startNumber.GetValue()).Int())
-		end := int(reflect.ValueOf(endNumber.GetValue()).Int())
-		step := int(reflect.ValueOf(stepNumber.GetValue()).Int())
-
-		for j := start; ; j += step {
-			if (step > 0 && j >= end) || (step < 0 && j <= end) {
-				break
-			}
-
-			i.Context.SymbolTable.Set(node.Token.Value, object.NewJNumber(j))
-
-			res, err = i.visit(node.BodyNode)
-			if err != nil {
-				return nil, err
-			}
-
-			if i.IsBreak {
-				i.Reset()
-
-				break
-			} else if i.IsContinue {
-				i.Reset()
-
-				continue
-			} else if i.IsReturn {
-				return res, nil
-			}
-
-			resElementValues = append(resElementValues, res)
-		}
+		return executeLoop(i, node, start, step, end)
 	}
 
-	if res == nil {
-		return object.NewJNumber(nil), nil
-	}
+	start := int(reflect.ValueOf(startNumber.GetValue()).Int())
+	end := int(reflect.ValueOf(endNumber.GetValue()).Int())
+	step := int(reflect.ValueOf(stepNumber.GetValue()).Int())
 
-	if node.IsBlockStatements {
-		return resElementValues[len(resElementValues)-1], nil
-	}
-
-	return object.NewJList(resElementValues).SetJPos(node.StartPos, node.EndPos).SetJContext(i.Context), nil
+	return executeLoop(i, node, start, step, end)
 }
 
 func (i *JInterpreter) visitFunDefNode(node *parser.JFuncDefNode) (object.JValue, error) {
@@ -665,4 +604,51 @@ func executeFunction(function *object.JFunction, argValues []object.JValue) (obj
 	}
 
 	return NewJInterpreter(newContext).visit(function.BodyNode)
+}
+
+func executeLoop[T ~int | ~float64](
+	i *JInterpreter,
+	node *parser.JForExprNode,
+	start, step, end T,
+) (object.JValue, error) {
+	var resElementValues []object.JValue
+	var res object.JValue
+	var err error
+
+	for j := start; ; j += step {
+		if (step > 0 && j >= end) || (step < 0 && j <= end) {
+			break
+		}
+
+		i.Context.SymbolTable.Set(node.Token.Value, object.NewJNumber(j))
+
+		res, err = i.visit(node.BodyNode)
+		if err != nil {
+			return nil, err
+		}
+
+		if i.IsBreak {
+			i.Reset()
+
+			break
+		} else if i.IsContinue {
+			i.Reset()
+
+			continue
+		} else if i.IsReturn {
+			return res, nil
+		}
+
+		resElementValues = append(resElementValues, res)
+	}
+
+	if res == nil {
+		return object.NewJNumber(nil), nil
+	}
+
+	if node.IsBlockStatements {
+		return resElementValues[len(resElementValues)-1], nil
+	}
+
+	return object.NewJList(resElementValues).SetJPos(node.StartPos, node.EndPos).SetJContext(i.Context), nil
 }
