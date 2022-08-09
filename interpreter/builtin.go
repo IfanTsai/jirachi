@@ -2,9 +2,11 @@ package interpreter
 
 import (
 	"bufio"
+	"bytes"
 	"fmt"
 	"io"
 	"os"
+	"os/exec"
 	"strconv"
 
 	"github.com/pkg/errors"
@@ -28,6 +30,7 @@ var (
 	IsString    = object.NewJBuiltInFunction("is_string", []string{"value"}, ExecuteIsString)
 	IsList      = object.NewJBuiltInFunction("is_list", []string{"value"}, ExecuteIsList)
 	IsFunction  = object.NewJBuiltInFunction("is_function", []string{"value"}, ExecuteIsFunction)
+	RunShell    = object.NewJBuiltInFunction("run_shell", []string{"text"}, ExecuteRunShell)
 	RunScript   = object.NewJBuiltInFunction("run", []string{"filename"}, ExecuteRun)
 )
 
@@ -110,8 +113,10 @@ func ExecuteInputNumber(function *object.JBuiltInFunction, args []object.JValue)
 	textBytes, _, _ := bufio.NewReader(os.Stdin).ReadLine()
 	text := string(textBytes)
 
-	var number interface{}
-	var err error
+	var (
+		number interface{}
+		err    error
+	)
 
 	number, err = strconv.Atoi(text)
 	if err != nil {
@@ -168,8 +173,7 @@ func ExecuteRun(function *object.JBuiltInFunction, args []object.JValue) (object
 		}, "failed to call run")
 	}
 
-	_, err = Run(filename, string(bytes))
-	if err != nil {
+	if _, err = Run(filename, string(bytes)); err != nil {
 		return nil, errors.Wrap(&common.JRunTimeError{
 			JError: &common.JError{
 				StartPos: function.StartPos,
@@ -181,4 +185,25 @@ func ExecuteRun(function *object.JBuiltInFunction, args []object.JValue) (object
 	}
 
 	return nil, nil
+}
+
+func ExecuteRunShell(function *object.JBuiltInFunction, args []object.JValue) (object.JValue, error) {
+	shellStr := args[0].GetValue().(string)
+	cmd := exec.Command("/bin/sh", "-c", shellStr)
+
+	var outBuf, errBuf bytes.Buffer
+	cmd.Stdout = &outBuf
+	cmd.Stderr = &errBuf
+
+	if err := cmd.Run(); err != nil || errBuf.Len() > 0 {
+		return nil, errors.Wrap(&common.JRunTimeError{
+			JError: &common.JError{
+				StartPos: function.StartPos,
+				EndPos:   function.EndPos,
+			},
+			Context: function.GetContext(),
+		}, errBuf.String())
+	}
+
+	return object.NewJString(outBuf.String()), nil
 }
