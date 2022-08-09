@@ -34,7 +34,9 @@ func init() {
 		Set("is_string", IsString).
 		Set("is_list", IsList).
 		Set("is_function", IsFunction).
-		Set("run", RunScript)
+		Set("run", RunScript).
+		Set("run_shell", RunShell).
+		Set("@", RunShell)
 }
 
 func Run(filename, text string) (interface{}, error) {

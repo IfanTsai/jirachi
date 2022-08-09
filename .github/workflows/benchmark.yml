@@ -1,25 +1,25 @@
 name: Run benchmark tests
-           
-on: 
+
+on:
   schedule:
     - cron: '0 0 * * *'
-  push:    
+  push:
     branches: [ master ]
   pull_request:
     branches: [ master ]
-           
-jobs:      
+
+jobs:
   benchmark:
     name: Benchmark Test
     runs-on: ubuntu-latest
-           
-    steps: 
+
+    steps:
     - uses: actions/checkout@v2
-           
+
     - name: Set up Go
       uses: actions/setup-go@v2
       with:
-        go-version: 1.18
-           
+        go-version: 1.19
+
     - name: Benchmark
       run: go test -run=none -v --cover ./... -benchmem --bench=.

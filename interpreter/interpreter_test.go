@@ -137,6 +137,18 @@ func TestRun(t *testing.T) {
 
 			},
 		},
+		{
+			name: "shell",
+			source: `
+				@"echo -n hello"
+			`,
+			checkResult: func(t *testing.T, resValue interface{}, err error) {
+				t.Helper()
+				require.NoError(t, err)
+				require.IsType(t, object.NewJString(nil), resValue)
+				require.Equal(t, "hello", resValue.(*object.JString).Value)
+			},
+		},
 	}
 
 	for i := range testCases {
