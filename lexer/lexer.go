@@ -30,10 +30,12 @@ func NewJLexer(filename, text string) *JLexer {
 }
 
 func (l *JLexer) MakeTokens() ([]*token.JToken, error) {
-	tokens := make([]*token.JToken, 0, len(l.Text))
+	var (
+		err error
+		tok *token.JToken
+	)
 
-	var err error
-	var tok *token.JToken
+	tokens := make([]*token.JToken, 0, len(l.Text))
 
 	for advanceAble := l.advance(); advanceAble; {
 		char := l.getCurrentChar()
@@ -51,7 +53,7 @@ func (l *JLexer) MakeTokens() ([]*token.JToken, error) {
 				return nil, err
 			}
 			tokens = append(tokens, tok)
-		case isLetters(char):
+		case isLetters(char), isAt(char):
 			tok, advanceAble = l.makeIdentifierToken()
 			tokens = append(tokens, tok)
 		case char == '"' || char == '\'':
@@ -187,7 +189,7 @@ func (l *JLexer) makeIdentifierToken() (*token.JToken, bool) {
 	for {
 		char := l.getCurrentChar()
 
-		if !isLetters(char) && !isDigit(char) {
+		if !isLetters(char) && !isDigit(char) && !isAt(char) {
 			break
 		}
 
@@ -362,4 +364,8 @@ func isDigit(char byte) bool {
 
 func isLetters(char byte) bool {
 	return ('a' <= char && char <= 'z') || ('A' <= char && char <= 'Z') || char == '_'
+}
+
+func isAt(char byte) bool {
+	return char == '@'
 }

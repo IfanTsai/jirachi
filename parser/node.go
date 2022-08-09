@@ -242,6 +242,29 @@ func (n *JIfExprNode) Type() JNodeType {
 	return IfExpr
 }
 
+func (n *JIfExprNode) String() string {
+	strBuilder := strings.Builder{}
+	strBuilder.WriteString("if ")
+	for index, caseNode := range n.CaseNodes {
+		if index != 0 {
+			strBuilder.WriteString(" else if ")
+		}
+
+		strBuilder.WriteString("(")
+		strBuilder.WriteString(caseNode[0].String())
+		strBuilder.WriteString(") {")
+		strBuilder.WriteString(caseNode[1].String())
+		strBuilder.WriteString("}")
+	}
+
+	if n.ElseCaseNode != nil {
+		strBuilder.WriteString(" else ")
+		strBuilder.WriteString(n.ElseCaseNode.String())
+	}
+
+	return strBuilder.String()
+}
+
 // JForExprNode is for expression node structure of AST
 type JForExprNode struct {
 	*JBaseNode        // JBaseNode.Token is variable name token
@@ -266,6 +289,17 @@ type JWhileExprNode struct {
 
 func (n *JWhileExprNode) Type() JNodeType {
 	return WhileExpr
+}
+
+func (n *JWhileExprNode) String() string {
+	strBuilder := strings.Builder{}
+	strBuilder.WriteString("while (")
+	strBuilder.WriteString(n.ConditionNode.String())
+	strBuilder.WriteString(") {")
+	strBuilder.WriteString(n.BodyNode.String())
+	strBuilder.WriteString("}")
+
+	return strBuilder.String()
 }
 
 // JFuncDefNode is function definition node structure of AST

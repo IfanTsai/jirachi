@@ -427,8 +427,6 @@ func (p *JParser) parseIfExprCases(caseKeyword string) ([][2]JNode, JNode, error
 
 	p.advance()
 
-	var cases [][2]JNode
-
 	condition, err := p.expr()
 	if err != nil {
 		return nil, nil, err
@@ -440,8 +438,11 @@ func (p *JParser) parseIfExprCases(caseKeyword string) ([][2]JNode, JNode, error
 
 	p.advance()
 
-	var elseCase JNode
-	var newCases [][2]JNode
+	var (
+		cases    [][2]JNode // { condition expression, body }
+		elseCase JNode
+		newCases [][2]JNode
+	)
 
 	if p.CurrentToken.Type == token.NEWLINE {
 		p.advance()
@@ -527,8 +528,10 @@ func (p *JParser) funcDef() (JNode, error) {
 
 	p.advance()
 
-	var body JNode
-	var err error
+	var (
+		body JNode
+		err  error
+	)
 
 	if p.CurrentToken.Type == token.ARROW {
 		p.advance()
@@ -641,6 +644,32 @@ func (p *JParser) call() (JNode, error) {
 	atom, err := p.atom()
 	if err != nil {
 		return nil, err
+	}
+
+	if _, ok := atom.(*JVarAccessNode); ok {
+		if val, ok := atom.GetToken().Value.(string); ok && val == "@" {
+			if p.CurrentToken.Type == token.STRING {
+				currentToken := p.CurrentToken
+				p.advance()
+
+				return &JCallExprNode{
+					JBaseNode: &JBaseNode{
+						StartPos: atom.GetStartPos(),
+						EndPos:   p.CurrentToken.EndPos,
+					},
+					CallNode: atom,
+					ArgNodes: []JNode{
+						&JStringNode{
+							JBaseNode: &JBaseNode{
+								Token:    currentToken,
+								StartPos: currentToken.StartPos,
+								EndPos:   currentToken.EndPos,
+							},
+						},
+					},
+				}, nil
+			}
+		}
 	}
 
 	if p.CurrentToken.Type == token.LPAREN {
@@ -854,15 +883,12 @@ func (p *JParser) statements(isBlock bool) (JNode, error) {
 		p.advance()
 	}
 
-	var err error
-	var statementNode JNode
-	var statementNodes []JNode
-
-	statementNode, err = p.statement()
+	statementNode, err := p.statement()
 	if err != nil {
 		return nil, err
 	}
-	statementNodes = append(statementNodes, statementNode)
+
+	statementNodes := []JNode{statementNode}
 
 	moreStatements := false
 	for {

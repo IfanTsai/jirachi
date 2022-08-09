@@ -55,4 +55,5 @@ linters:
     - ireturn # Do not check the return object is interface
     - gocyclo
     - cyclop
+    - exhaustruct
   enable-all: true
